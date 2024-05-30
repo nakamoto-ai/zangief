@@ -104,7 +104,8 @@ def get_ip_port(modules_adresses: dict[int, str]):
 def get_netuid(is_testnet):
     if is_testnet:
         return 23
-    raise ValueError(f"Subnet on mainnet not yet registered")
+    else:
+        return 1
 
 
 class TranslateValidator(Module):

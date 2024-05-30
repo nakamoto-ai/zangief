@@ -14,6 +14,13 @@ from urllib.parse import urljoin, urlparse
 from abc import abstractmethod
 
 
+def get_netuid(is_testnet):
+    if is_testnet:
+        return 23
+    else:
+        return 1
+
+
 class BaseMiner(Module):
 
     @endpoint
@@ -61,8 +68,9 @@ class BaseMiner(Module):
         else:
             logger.info("Connecting to main network ... ")
 
+        netuid = get_netuid(is_testnet=use_testnet)
         bucket = TokenBucketLimiter(20, refill_rate)
-        server = ModuleServer(miner, key, limiter=bucket, subnets_whitelist=[23], use_testnet=use_testnet)
+        server = ModuleServer(miner, key, limiter=bucket, subnets_whitelist=[netuid], use_testnet=use_testnet)
         app = server.get_fastapi_app()
 
         uvicorn.run(app, host=parsed_url.hostname, port=parsed_url.port)
