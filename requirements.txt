@@ -1,0 +1,11 @@
+communex 
+typer
+uvicorn
+keylimiter
+pydantic-settings
+numpy
+loguru
+unbabel-comet
+bert-score
+datasets
+langid

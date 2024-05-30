@@ -1,0 +1,8 @@
+communex
+typer
+uvicorn
+keylimiter
+pydantic-settings
+numpy
+loguru
+openai

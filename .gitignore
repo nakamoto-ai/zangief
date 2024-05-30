@@ -1,0 +1,16 @@
+/.direnv
+/.idea
+/safe
+/stuff
+/data
+/volumes
+/result
+
+/env/**/*.env
+
+node_modules
+
+.ipynb_checkpoints
+
+/.tests
+__pycache__
