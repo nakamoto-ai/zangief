@@ -44,7 +44,7 @@ source venv/bin/activate
 
 3) Register the validator
 
-`comx module register <name> <your_commune_key> --netuid <zangief netuid>`
+`comx module register <name> <your_commune_key> --netuid 1`
 
 4) Run the validator
 

@@ -45,7 +45,7 @@ source venv/bin/activate
 
 5) Register the miner
 
-`comx module register <name> <your_commune_key> --netuid <zangief netuid> --ip <your_ip> --port <your_port>`
+`comx module register <name> <your_commune_key> --netuid 1 --ip <your_ip> --port <your_port>`
 
 6) Run the miner
 
@@ -102,7 +102,7 @@ model = gpt-3.5-turbo
 
 5) Register the miner
 
-`comx module register <name> <your_commune_key> --netuid <zangief netuid> --ip <your_ip> --port <your_port>`
+`comx module register <name> <your_commune_key> --netuid 1 --ip <your_ip> --port <your_port>`
 
 6) Run the miner
 
@@ -153,7 +153,7 @@ source venv/bin/activate
 
 4) Register the miner
 
-`comx module register <name> <your_commune_key> --netuid <zangief netuid> --ip <your_ip> --port <your_port>`
+`comx module register <name> <your_commune_key> --netuid 1 --ip <your_ip> --port <your_port>`
 
 5) Run the miner
 
