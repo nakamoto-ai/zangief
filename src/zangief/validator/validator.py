@@ -266,13 +266,13 @@ class TranslateValidator(Module):
             modules_addresses = self.get_addresses(self.client, netuid)
         except Exception as e:
             logger.error(f"Error syncing with the network: {e}")
-            return
+            return None
 
         modules_keys = self.client.query_map_key(netuid)
         val_ss58 = self.key.ss58_address
         if val_ss58 not in modules_keys.values():
             logger.error(f"Validator key {val_ss58} is not registered in subnet")
-            return
+            return None
 
         miners_to_query = random.sample(modules_keys.keys(), 8)
 
