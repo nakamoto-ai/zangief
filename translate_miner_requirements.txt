@@ -1,4 +1,6 @@
 communex
+transformers
+openai
 typer
 uvicorn
 keylimiter
