@@ -173,9 +173,6 @@ class TranslateValidator(Module):
             "zh": [cc_100],
         }
 
-        from tracker import ValidatorTracker
-        self.tracker = self.tracker = ValidatorTracker(self.languages, 1000)
-
 
     def get_addresses(self, client: CommuneClient, netuid: int) -> dict[int, str]:
         """
@@ -316,7 +313,6 @@ class TranslateValidator(Module):
 
         set_weights(score_dict, self.netuid, self.client, self.key)
 
-        self.tracker.save_top_scores(source_language, target_language, miner_prompt, miner_answers, scores)
 
     def validation_loop(self, config: Config | None = None) -> None:
         while True:
