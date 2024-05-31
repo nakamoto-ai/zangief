@@ -1,5 +1,6 @@
 communex
 typer
+transformers
 uvicorn
 keylimiter
 pydantic-settings
