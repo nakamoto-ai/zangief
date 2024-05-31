@@ -73,8 +73,15 @@ def set_weights(
     uids = list(weighted_scores.keys())
     weights = list(weighted_scores.values())
 
-    client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
-
+    try:
+        client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
+    except Exception as e:
+        logger.error(f"WARNING: Failed to set weights with exception: {e}. Will retry.")
+        sleepy_time = random.uniform(1, 2)
+        time.sleep(sleepy_time)
+        # retry with a different node
+        client = CommuneClient(get_node_url())
+        client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
 
 
 def extract_address(string: str):
@@ -82,6 +89,7 @@ def extract_address(string: str):
     Extracts an address from a string.
     """
     return re.search(IP_REGEX, string)
+
 
 def get_ip_port(modules_adresses: dict[int, str]):
     """
