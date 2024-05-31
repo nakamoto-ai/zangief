@@ -343,7 +343,7 @@ if __name__ == '__main__':
     else:
         logger.info("Connecting to Main network ... ")
     c_client = CommuneClient(get_node_url(use_testnet=use_testnet))
-    subnet_uid = get_netuid(c_client)
+    subnet_uid = get_netuid(use_testnet)
     keypair = classic_load_key(config.validator.get("keyfile"))
 
     validator = TranslateValidator(
