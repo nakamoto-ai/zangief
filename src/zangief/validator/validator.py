@@ -174,6 +174,7 @@ class TranslateValidator(Module):
         }
 
 
+
     def get_addresses(self, client: CommuneClient, netuid: int) -> dict[int, str]:
         """
         Retrieve all module addresses from the subnet.
@@ -253,7 +254,12 @@ class TranslateValidator(Module):
         Args:
             netuid: The network UID of the subnet.
         """
-        modules_addresses = self.get_addresses(self.client, netuid)
+        try:
+            modules_addresses = self.get_addresses(self.client, netuid)
+        except Exception as e:
+            logger.error(f"Error syncing with the network: {e}")
+            return
+
         modules_keys = self.client.query_map_key(netuid)
         val_ss58 = self.key.ss58_address
         if val_ss58 not in modules_keys.values():
@@ -312,7 +318,6 @@ class TranslateValidator(Module):
             return None
 
         set_weights(score_dict, self.netuid, self.client, self.key)
-
 
     def validation_loop(self, config: Config | None = None) -> None:
         while True:
