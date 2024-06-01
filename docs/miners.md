@@ -4,54 +4,8 @@
 # Miner Documentation
 
 ## Miners
-* [Translate Miner](#How-To-run-the-translate-miner)
 * [OpenAI Miner](#How-To-run-the-openai-miner)
 * [M2M_100 Miner](#How-To-run-the-m2m_100-miner)
-
-## How To run the Translate miner:
-
-### Hardware Requirements
-
- Recommended Requirements
-
-    CPU: 4-core Intel i5 or equivalent AMD processor, 2.5 GHz-3.5 GHz
-    RAM: 4 GB or more
-    Storage: 8 GB SSD
-    GPU: Not needed
-    Network: Gigabit Ethernet or better
-
-> [!NOTE]
-> Requires python3.10
-
-
-1) Clone project
-
-`git clone https://github.com/nakamoto-ai/zangief`
-
-
-2) Create virtual environment
-
-```
-cd zangief
-python -m venv venv
-source venv/bin/activate
-```
-
-3) Install dependencies
-
-`pip install -r translate_miner_requirements.txt`
-
-4) Make sure the default port 5000 is open or change the port in the `env/config.ini` file
-
-5) Register the miner
-
-`comx module register <name> <your_commune_key> --netuid 1 --ip <your_ip> --port <your_port>`
-
-6) Run the miner
-
-```
-python src/zangief/miner/translate_miner.py
-```
 
 
 ## How To run the OpenAI miner:
