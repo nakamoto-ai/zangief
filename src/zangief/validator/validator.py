@@ -269,7 +269,8 @@ class TranslateValidator(Module):
             modules_addresses = self.get_addresses(self.client, netuid)
         except Exception as e:
             logger.error(f"Error syncing with the network: {e}")
-            return None
+            self.client = CommuneClient(get_node_url())
+            modules_addresses = self.get_addresses(self.client, netuid)
 
         modules_keys = self.client.query_map_key(netuid)
         val_ss58 = self.key.ss58_address
