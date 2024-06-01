@@ -232,6 +232,9 @@ class TranslateValidator(Module):
             miner_answer = None
         return miner_answer
 
+    def get_miners_to_query(self, miner_keys):
+        return miner_keys
+
     def get_miner_prompt(self) -> tuple:
         """
         Generate a prompt for the miner modules.
@@ -274,7 +277,7 @@ class TranslateValidator(Module):
             logger.error(f"Validator key {val_ss58} is not registered in subnet")
             return None
 
-        miners_to_query = random.sample(modules_keys.keys(), 8)
+        miners_to_query = self.get_miners_to_query(modules_keys.keys())
 
         modules_info: dict[int, tuple[list[str], Ss58Address]] = {}
         miner_uids = []
