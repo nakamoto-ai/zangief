@@ -29,16 +29,20 @@ class BaseMiner(Module):
     top_k: Optional[Union[int, Any]]
     no_repeat_ngram_size: Optional[Union[int, Any]]
     num_beams: Optional[Union[int, Any]]
-    
+
     @endpoint
-    def generate(self, prompt: str, source_language: str, target_language: str) -> dict[str, str]:
+    def generate(
+        self, prompt: str, source_language: str, target_language: str
+    ) -> dict[str, str]:
         start_time = time.time()
         logger.info("Generating translation... ")
 
         logger.info(f"Source ({source_language})")
         logger.info(f"{prompt}")
 
-        translation = self.generate_translation(prompt, source_language, target_language)
+        translation = self.generate_translation(
+            prompt, source_language, target_language
+        )
 
         logger.info(f"Translation ({target_language})")
         logger.info(translation)
@@ -51,16 +55,24 @@ class BaseMiner(Module):
 
     @staticmethod
     def get_config():
-        config_file = os.path.join(f'{dirname(dirname(dirname(dirname(realpath(__file__)))))}', 'env/config.ini')
+        config_file = os.path.join(
+            f"{dirname(dirname(dirname(dirname(realpath(__file__)))))}",
+            "env/config.ini",
+        )
         return Config(config_file=config_file)
 
     @abstractmethod
-    def generate_translation(self, prompt: str, source_language: str, target_language: str):
+    def generate_translation(
+        self, prompt: str, source_language: str, target_language: str
+    ):
         pass
 
     @staticmethod
     def start_miner_server(miner):
-        config_file = os.path.join(f'{dirname(dirname(dirname(dirname(realpath(__file__)))))}', 'env/config.ini')
+        config_file = os.path.join(
+            f"{dirname(dirname(dirname(dirname(realpath(__file__)))))}",
+            "env/config.ini",
+        )
         config = Config(config_file=config_file)
         key = classic_load_key(str(config.get_value("keyfile")))
         url = config.get_value("url")
@@ -76,7 +88,13 @@ class BaseMiner(Module):
 
         netuid = get_netuid(is_testnet=use_testnet)
         bucket = TokenBucketLimiter(20, refill_rate)
-        server = ModuleServer(miner, key, limiter=bucket, subnets_whitelist=[netuid], use_testnet=use_testnet)
+        server = ModuleServer(
+            miner,
+            key,
+            limiter=bucket,
+            subnets_whitelist=[netuid],
+            use_testnet=use_testnet,
+        )
         app = server.get_fastapi_app()
 
         uvicorn.run(app, host=str(parsed_url.hostname), port=int(str(parsed_url.port)))

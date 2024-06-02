@@ -10,14 +10,18 @@ class Reward:
         comet_model_path = download_model("Unbabel/wmt20-comet-qe-da")
         self.comet_model = load_from_checkpoint(comet_model_path)
         self.comet_model.eval()
-        self.bert_model = BERTScorer(model_type="bert-base-multilingual-cased", device=device)
+        self.bert_model = BERTScorer(
+            model_type="bert-base-multilingual-cased", device=device
+        )
 
     def get_bert_score(self, sources, targets):
         _, _, f1 = self.bert_model.score(sources, targets)
         return f1.tolist()
 
     def prep_comet_data(self, sources, targets):
-        data = [{"src": source, "mt": target} for source, target in zip(sources, targets)]
+        data = [
+            {"src": source, "mt": target} for source, target in zip(sources, targets)
+        ]
         return data
 
     def get_comet_score(self, sources, targets):
@@ -60,7 +64,9 @@ class Reward:
             sources = [source] * len(cleaned_targets)
             bert_scores = self.get_bert_score(sources, cleaned_targets)
             comet_scores = self.get_comet_score(sources, cleaned_targets)
-            for target, bert_score, comet_score in zip(cleaned_targets, bert_scores, comet_scores):
+            for target, bert_score, comet_score in zip(
+                cleaned_targets, bert_scores, comet_scores
+            ):
                 composite_score = self.get_composite_score(bert_score, comet_score)
                 if composite_score > 1:
                     composite_score = 1

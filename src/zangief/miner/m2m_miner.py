@@ -16,17 +16,21 @@ class M2MMiner(BaseMiner):
         self.top_k = config.get_value("top_k", "4")
         self.no_repeat_ngram_size = config.get_value("no_repeat_ngram_size", "3")
         self.num_beams = config.get_value("num_beams", "2")
-        self.model = M2M100ForConditionalGeneration.from_pretrained("facebook/m2m100_1.2B")
+        self.model = M2M100ForConditionalGeneration.from_pretrained(
+            "facebook/m2m100_1.2B"
+        )
         if isinstance(self.model, M2M100ForConditionalGeneration):
             self.model.to(self.device)
         self.tokenizer = M2M100Tokenizer.from_pretrained(str(self.model_name))
-        
+
     def get_device(self):
         if torch.cuda.is_available():
             return torch.device("cuda")
         return torch.device("cpu")
-    
-    def generate_translation(self, prompt: str, source_language: str, target_language: str):
+
+    def generate_translation(
+        self, prompt: str, source_language: str, target_language: str
+    ):
         self.tokenizer.src_lang = source_language
         source_tokenizer = self.tokenizer(
             [prompt],
@@ -46,9 +50,9 @@ class M2MMiner(BaseMiner):
                 top_k=self.top_k,
             )
 
-        return self.tokenizer.batch_decode(
-            generated_tokens, skip_special_tokens=True
-        )[0]
+        return self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)[
+            0
+        ]
 
 
 if __name__ == "__main__":

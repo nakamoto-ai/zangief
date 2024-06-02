@@ -10,13 +10,12 @@ class Config:
     top_k: str
     no_repeat_ngram_size: str
     num_beams: str
-    
+
     def __init__(self, config_file):
         if config_file is None:
-            config_file = '../../../env/config.ini'
+            config_file = "../../../env/config.ini"
         self.config = configparser.ConfigParser()
         self.config.read(config_file)
-        
 
     def get_value(self, option, default=None):
         section = "miner"

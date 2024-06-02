@@ -11,7 +11,9 @@ class TranslateMiner(BaseMiner):
         super().__init__()
         config = self.get_config()
 
-    def generate_translation(self, prompt: str, source_language: str, target_language: str):
+    def generate_translation(
+        self, prompt: str, source_language: str, target_language: str
+    ):
         translator = Translator(from_lang=source_language, to_lang=target_language)
         return translator.translate(prompt)
 
