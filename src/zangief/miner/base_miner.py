@@ -1,26 +1,32 @@
 import os
 import time
-import argparse
+from fastapi import FastAPI
+from substrateinterface.keypair import Keypair
 import uvicorn
 from os.path import dirname, realpath
-from urllib.parse import urlparse
+from pathlib import Path
+from urllib.parse import ParseResult, urlparse
 from abc import abstractmethod
 from loguru import logger
 from communex.module import endpoint, Module
 from communex.module.server import ModuleServer
 from communex.compat.key import classic_load_key
 from keylimiter import TokenBucketLimiter
-from typing import Optional, Any, Union
 
+
+from typing import Optional, Any, Tuple, Union, List
+
+from src.zangief.miner.translator import SeamlessTranslator
 from src.zangief.miner.config import Config
 
 
-def get_netuid(is_testnet):
+def get_netuid(is_testnet) -> int:
     return 23 if is_testnet else 1
 
 
 class BaseMiner(Module):
-
+    config: Optional[Union[Config, Any]]
+    translator: Optional[Union[SeamlessTranslator, Any]]
     model_name: Optional[Union[str, Any]]
     device: Optional[Union[str, Any]]
     max_length: Optional[Union[int, Any]]
@@ -32,69 +38,89 @@ class BaseMiner(Module):
 
     @endpoint
     def generate(
-        self, prompt: str, source_language: str, target_language: str
+        self,
+        prompt: str,
+        source_language: str,
+        target_language: str,
     ) -> dict[str, str]:
-        start_time = time.time()
+        self.config = self.get_config()
+        start_time: float = time.time()
         logger.info("Generating translation... ")
 
         logger.info(f"Source ({source_language})")
         logger.info(f"{prompt}")
+        self.translator = SeamlessTranslator()
 
-        translation = self.generate_translation(
-            prompt, source_language, target_language
+        translation: Tuple[Path] | Any = self.generate_translation(
+            prompt=prompt,
+            source_language=source_language,
+            target_language=target_language,
         )
 
         logger.info(f"Translation ({target_language})")
         logger.info(translation)
 
-        end_time = time.time()
-        execution_time = end_time - start_time
+        end_time: float = time.time()
+        execution_time: float = end_time - start_time
         logger.info(f"Responded in {execution_time} seconds")
 
-        return {"answer": str(translation)}
+        return {"answer": str(object=translation)}
 
-    @staticmethod
-    def get_config():
-        config_file = os.path.join(
-            f"{dirname(dirname(dirname(dirname(realpath(__file__)))))}",
-            "env/config.ini",
-        )
+    def get_config(self) -> Config:
+        config_file = os.path.join(os.path.dirname(__file__), "../../../env/config.ini")
         return Config(config_file=config_file)
 
-    @abstractmethod
     def generate_translation(
-        self, prompt: str, source_language: str, target_language: str
-    ):
-        pass
+        self, prompt: str, source_language: str, target_language: Union[List[str], str]
+    ) -> Tuple[Path, Path] | Any:
+        logger.info("Generating translation... ")
+        input_file = Path("input/input_file.txt")
+        if not prompt:
+            logger.error("Prompt cannot be empty")
+            raise ValueError("Prompt cannot be empty")
+        input_file.write_text(data=prompt, encoding="utf-8")
+        if not source_language:
+            logger.error("Source language cannot be empty")
+            raise ValueError("Source language cannot be empty")
+        if not self.translator:
+            self.translator = SeamlessTranslator()
+        if not target_language:
+            target_langauge: str = self.translator.target_languages["eng"]
+        tgt_language: List[str] = []
+        if isinstance(target_langauge, str):
+            tgt_language.append(str(object=target_language))
 
-    @staticmethod
-    def start_miner_server(miner):
-        config_file = os.path.join(
-            f"{dirname(dirname(dirname(dirname(realpath(__file__)))))}",
-            "env/config.ini",
+        return self.translator.translation_inference(
+            in_file=input_file, task_string="t2tt", target_languages=tgt_language
         )
-        config = Config(config_file=config_file)
-        key = classic_load_key(str(config.get_value("keyfile")))
-        url = config.get_value("url")
-        parsed_url = urlparse(url)
 
-        refill_rate = 1 / 100
+    def start_miner_server(self, keyname, host, port) -> None:
+        config: Config = self.get_config()
+        key: Keypair = classic_load_key(name=str(keyname))
 
-        use_testnet = config.get_value("isTestnet") == "1"
+        refill_rate: float = 1 / 1000
+        use_testnet: bool = config.get_value(option="isTestnet") == "1"
         if use_testnet:
             logger.info("Connecting to TEST network ... ")
         else:
             logger.info("Connecting to main network ... ")
-
-        netuid = get_netuid(is_testnet=use_testnet)
-        bucket = TokenBucketLimiter(20, refill_rate)
+        bucket = TokenBucketLimiter(
+            refill_rate=refill_rate,
+            bucket_size=1000,
+            time_func=time.time,
+        )
+        netuid: int = get_netuid(is_testnet=use_testnet)
         server = ModuleServer(
-            miner,
-            key,
+            module=self,
+            key=key,
             limiter=bucket,
             subnets_whitelist=[netuid],
             use_testnet=use_testnet,
         )
-        app = server.get_fastapi_app()
+        app: FastAPI = server.get_fastapi_app()
 
-        uvicorn.run(app, host=str(parsed_url.hostname), port=int(str(parsed_url.port)))
+        uvicorn.run(
+            app=app,
+            host=str(object=host),
+            port=int(str(object=port)),
+        )

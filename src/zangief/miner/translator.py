@@ -1,37 +1,47 @@
-import io
-import json
-import matplotlib as mpl
-import matplotlib.pyplot as plt
-import mmap
-import numpy
-import soundfile
 import torchaudio
 import torch
 
-from collections import defaultdict
-from IPython.display import Audio, display
 from pathlib import Path
-from pydub import AudioSegment
-from pydub.playback import play
 
 from loguru import logger
 from typing import Union, Tuple, List, Dict
 
-from model.seamless_communication.src.seamless_communication.inference import Translator
-from model.seamless_communication.src.seamless_communication.streaming.dataloaders.s2tt import (
-    SileroVADSilenceRemover,
-)
+from seamless_communication.inference.translator import Translator
 
 
 class SeamlessTranslator:
+    """A class for performing translation tasks using a specified model and vocoder.
+
+    Attributes:
+        model_name (str): The name of the translation model.
+        vocoder_name (str): The name of the vocoder.
+        translator (Translator): The translator object.
+        target_languages (Dict[str, str]): A dictionary mapping language names to language codes.
+        task_strings (Dict[str, str]): A dictionary mapping task strings to abbreviations.
+
+    Args:
+        in_file (Union[str, Path]): The input file for translation.
+        task_string (str): The type of translation task.
+        target_languages (List[str]): The target languages for translation.
+
+    Returns:
+        Tuple[Path, Path] | None: A tuple containing the paths to the translated text and audio files, or None if translation fails.
+    """
+
     model_name: str
     vocoder_name: str
     translator: Translator
     target_languages: Dict[str, str]
     task_strings: Dict[str, str]
 
-    def __init__(self):
-        self.model_name = "seamlessM4T_v2_large"
+    def __init__(self) -> None:
+        """
+        Initializes the SeamlessTranslator object with the specified model and vocoder names,
+        and creates a translator object using the specified model and vocoder. The translator
+        object is created with the device set to "cuda:0" and the data type set to "torch.float16".
+        The target_languages dictionary maps language names to language codes, and the task_strings
+        dictionary maps task strings to abbreviations.
+        """
         self.vocoder_name = (
             "vocoder_v2"
             if self.model_name == "seamlessM4T_v2_large"
@@ -39,9 +49,9 @@ class SeamlessTranslator:
         )
 
         self.translator = Translator(
-            self.model_name,
-            self.vocoder_name,
-            device=torch.device("cuda:0"),
+            model_name_or_card=self.model_name,
+            vocoder_name_or_card=self.vocoder_name,
+            device=torch.device(device="cuda:0"),
             dtype=torch.float16,
         )
         self.target_languages = {
@@ -156,13 +166,26 @@ class SeamlessTranslator:
 
     def translation_inference(
         self,
-        in_file: Union[
-            str, Path
-        ] = "model/seamless_communication/demo/dino_pretssel/audios/employee_eng_spa/ref/noisy_spk1_default_00240.wav",
+        in_file: Union[str, Path],
         task_string: str = "s2st",
         target_languages: List[str] = ["eng"],
-    ):
-        logger.info("English audio:")
+    ) -> Tuple[Path, Path] | None:
+        """
+        Perform translation inference on the given input file.
+
+        Args:
+            in_file (Union[str, Path]): The path to the input file.
+            task_string (str, optional): The task string. Defaults to "s2st".
+            target_languages (List[str], optional): The list of target languages. Defaults to ["eng"].
+
+        Returns:
+            Tuple[Path, Path] | None: A tuple containing the absolute paths to the output text file and output audio file, or None if the input file is not found.
+
+        Raises:
+            FileNotFoundError: If the input file is not found.
+            ValueError: If the task string or target language is invalid.
+
+        """
 
         if not Path(in_file).exists():
             logger.error(f"File {in_file} not found")
@@ -172,20 +195,20 @@ class SeamlessTranslator:
         output_text = Path(f"model/output/{input_file.stem}.txt")
         output_audio = Path(f"model/output/{input_file.stem}.wav")
 
-        task_str = self.task_strings[task_string]
+        task_str: str = self.task_strings[task_string]
         if not task_str:
             logger.error("Invalid task string")
             raise ValueError("Invalid task string")
 
         for tgt_lang in target_languages:
 
-            tgt_lang = self.target_languages[tgt_lang]
+            tgt_lang: str = self.target_languages[tgt_lang]
             if not tgt_lang:
                 logger.error("Invalid target language")
                 raise ValueError("Invalid target language")
 
             text_output, speech_output = self.translator.predict(
-                input=str(in_file),
+                input=str(object=in_file),
                 task_str=task_str,
                 tgt_lang=tgt_lang,
             )
@@ -193,11 +216,15 @@ class SeamlessTranslator:
 
             if speech_output:
                 torchaudio.save(
-                    output_audio,
-                    speech_output.audio_wavs[0][0].to(torch.float32).cpu(),
-                    speech_output.sample_rate,
+                    uri=output_audio,
+                    src=speech_output.audio_wavs[0][0].to(torch.float32).cpu(),
+                    sample_rate=speech_output.sample_rate,
                 )
             if text_output:
-                output_text.write_text(str(text_output[0]), encoding="utf-8")
+                output_text.write_text(
+                    data=str(object=text_output[0]), encoding="utf-8"
+                )
 
             logger.info("Translated target file")
+
+            return output_text.absolute(), output_audio.absolute()

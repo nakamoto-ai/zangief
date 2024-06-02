@@ -1,5 +1,4 @@
 from comet import download_model, load_from_checkpoint
-import bert_score
 from bert_score import BERTScorer
 import langid
 
