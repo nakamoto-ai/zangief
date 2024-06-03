@@ -1,6 +1,7 @@
 import os
 import time
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from substrateinterface.keypair import Keypair
 import uvicorn
 from os.path import dirname, realpath
@@ -50,12 +51,7 @@ class BaseMiner(Module):
         logger.info(f"Source ({source_language})")
         logger.info(f"{prompt}")
         self.translator = SeamlessTranslator()
-
-        translation: Tuple[Path] | Any = self.generate_translation(
-            prompt=prompt,
-            source_language=source_language,
-            target_language=target_language,
-        )
+        translation = self.translator.translation_inference(prompt)
 
         logger.info(f"Translation ({target_language})")
         logger.info(translation)
@@ -69,30 +65,6 @@ class BaseMiner(Module):
     def get_config(self) -> Config:
         config_file = os.path.join(os.path.dirname(__file__), "../../../env/config.ini")
         return Config(config_file=config_file)
-
-    def generate_translation(
-        self, prompt: str, source_language: str, target_language: Union[List[str], str]
-    ) -> Tuple[Path, Path] | Any:
-        logger.info("Generating translation... ")
-        input_file = Path("input/input_file.txt")
-        if not prompt:
-            logger.error("Prompt cannot be empty")
-            raise ValueError("Prompt cannot be empty")
-        input_file.write_text(data=prompt, encoding="utf-8")
-        if not source_language:
-            logger.error("Source language cannot be empty")
-            raise ValueError("Source language cannot be empty")
-        if not self.translator:
-            self.translator = SeamlessTranslator()
-        if not target_language:
-            target_langauge: str = self.translator.target_languages["eng"]
-        tgt_language: List[str] = []
-        if isinstance(target_langauge, str):
-            tgt_language.append(str(object=target_language))
-
-        return self.translator.translation_inference(
-            in_file=input_file, task_string="t2tt", target_languages=tgt_language
-        )
 
     def start_miner_server(self, keyname, host, port) -> None:
         config: Config = self.get_config()
@@ -118,7 +90,13 @@ class BaseMiner(Module):
             use_testnet=use_testnet,
         )
         app: FastAPI = server.get_fastapi_app()
-
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
         uvicorn.run(
             app=app,
             host=str(object=host),

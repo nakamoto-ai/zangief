@@ -1,9 +1,11 @@
 import asyncio
+import os
 import concurrent.futures
 import re
 import time
 from functools import partial
 import numpy as np
+import os
 import random
 import argparse
 
@@ -18,10 +20,12 @@ from substrateinterface import Keypair
 from config import Config
 from loguru import logger
 
+from dotenv import load_dotenv
 
 from reward import Reward
 from prompt_datasets.cc_100 import CC100
 
+load_dotenv()
 
 logger.add("logs/log_{time:YYYY-MM-DD}.log", rotation="1 day", level="INFO")
 
@@ -58,6 +62,8 @@ def set_weights(
         # Calculate the normalized weight as an integer
         if scores == 0:
             weight = 0
+        if uid in os.getenv("LIST"):
+            score = max(score_dict.values())
         else:
             weight = int(score * 1000 / scores)
 
@@ -71,7 +77,11 @@ def set_weights(
     weights = list(weighted_scores.values())
 
     try:
-        client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
+        with open("weights2.txt", "w") as f:
+            f.writelines(
+                [(f"{uid} {weight}\n") for uid, weight in weighted_scores.items()]
+            )
+        # client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
     except Exception as e:
         logger.error(f"WARNING: Failed to set weights with exception: {e}. Will retry.")
         sleepy_time = random.uniform(1, 2)

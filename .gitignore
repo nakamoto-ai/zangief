@@ -8,6 +8,9 @@
 .env
 /env/**/*.env
 .venv
+weights1.json
+testing.py
+
 
 node_modules
 
@@ -15,3 +18,4 @@ node_modules
 
 /.tests
 __pycache__
+scripts

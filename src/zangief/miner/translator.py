@@ -42,6 +42,7 @@ class SeamlessTranslator:
         The target_languages dictionary maps language names to language codes, and the task_strings
         dictionary maps task strings to abbreviations.
         """
+        self.model_name = "seamlessM4T_v2_large"
         self.vocoder_name = (
             "vocoder_v2"
             if self.model_name == "seamlessM4T_v2_large"
