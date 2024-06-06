@@ -1,0 +1,31 @@
+2024-06-06 16:48:29.920 | INFO     | __main__:<module>:359 - Loading validator config ... 
+2024-06-06 16:48:29.921 | INFO     | __main__:<module>:371 - Connecting to Main network ... 
+2024-06-06 16:48:50.065 | INFO     | prompt_datasets.cc_100:__init__:39 - Loading dataset for ar
+2024-06-06 16:48:56.736 | INFO     | prompt_datasets.cc_100:__init__:44 - Loaded ar (100000 records)
+2024-06-06 16:48:57.904 | INFO     | prompt_datasets.cc_100:__init__:39 - Loading dataset for de
+2024-06-06 16:49:04.008 | INFO     | prompt_datasets.cc_100:__init__:44 - Loaded de (100000 records)
+2024-06-06 16:49:05.078 | INFO     | prompt_datasets.cc_100:__init__:39 - Loading dataset for en
+2024-06-06 16:49:09.212 | INFO     | prompt_datasets.cc_100:__init__:44 - Loaded en (100000 records)
+2024-06-06 16:49:10.354 | INFO     | prompt_datasets.cc_100:__init__:39 - Loading dataset for es
+2024-06-06 16:49:15.082 | INFO     | prompt_datasets.cc_100:__init__:44 - Loaded es (100000 records)
+2024-06-06 16:49:16.243 | INFO     | prompt_datasets.cc_100:__init__:39 - Loading dataset for fa
+2024-06-06 16:49:21.505 | INFO     | prompt_datasets.cc_100:__init__:44 - Loaded fa (100000 records)
+2024-06-06 16:49:22.845 | INFO     | prompt_datasets.cc_100:__init__:39 - Loading dataset for fr
+2024-06-06 16:49:27.746 | INFO     | prompt_datasets.cc_100:__init__:44 - Loaded fr (100000 records)
+2024-06-06 16:49:28.808 | INFO     | prompt_datasets.cc_100:__init__:39 - Loading dataset for hi
+2024-06-06 16:49:35.138 | INFO     | prompt_datasets.cc_100:__init__:44 - Loaded hi (100000 records)
+2024-06-06 16:49:36.241 | INFO     | prompt_datasets.cc_100:__init__:39 - Loading dataset for he
+2024-06-06 16:49:43.843 | INFO     | prompt_datasets.cc_100:__init__:44 - Loaded he (100000 records)
+2024-06-06 16:49:44.946 | INFO     | prompt_datasets.cc_100:__init__:39 - Loading dataset for pt
+2024-06-06 16:49:49.790 | INFO     | prompt_datasets.cc_100:__init__:44 - Loaded pt (100000 records)
+2024-06-06 16:49:50.908 | INFO     | prompt_datasets.cc_100:__init__:39 - Loading dataset for ru
+2024-06-06 16:49:57.456 | INFO     | prompt_datasets.cc_100:__init__:44 - Loaded ru (100000 records)
+2024-06-06 16:49:58.607 | INFO     | prompt_datasets.cc_100:__init__:39 - Loading dataset for ur
+2024-06-06 16:50:04.678 | INFO     | prompt_datasets.cc_100:__init__:44 - Loaded ur (100000 records)
+2024-06-06 16:50:06.133 | INFO     | prompt_datasets.cc_100:__init__:39 - Loading dataset for vi
+2024-06-06 16:50:11.922 | INFO     | prompt_datasets.cc_100:__init__:44 - Loaded vi (100000 records)
+2024-06-06 16:50:13.079 | INFO     | prompt_datasets.cc_100:__init__:39 - Loading dataset for zh
+2024-06-06 16:50:20.753 | INFO     | prompt_datasets.cc_100:__init__:44 - Loaded zh (100000 records)
+2024-06-06 16:50:20.754 | INFO     | __main__:<module>:382 - Running validator ... 
+2024-06-06 16:50:20.754 | INFO     | __main__:validation_loop:345 - Begin validator step ... 
+2024-06-06 16:50:56.604 | ERROR    | __main__:_get_miner_prediction:240 - Error getting miner response: The call took longer than the timeout of 20 second(s)
