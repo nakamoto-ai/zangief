@@ -97,21 +97,23 @@ def set_weights(
     finally:
         save_running_weights(running_weights)
 
+
 def get_running_weights():
     with open('running_weights.json', 'r', encoding='utf-8') as rw_file:
         running_weights = json.load(rw_file)
     print(f"Running Weights Before Scoring: {running_weights}")
     return running_weights
 
+
 def sigmoid_transition(current_weight, new_weight, num_iterations=6):
     """
-    Perform a sigmoid transition from current weight to new weight.
+    Perform a sigmoid transition from current weight to updated weight using new weight.
     **Adjust 'num_iterations' according to needs**
 
     Parameters:
-        current_weight (float): The current weight.
-        new_weight (float): The desired new weight.
-        num_iterations (int): Number of iterations for the transition.
+        current_weight (float): The weight before this step.
+        new_weight (float): The weight for this step.
+        num_iterations (int): Number of iterations to reach sigmoid transition
 
     Returns:
         float: The updated weight after sigmoid transition.
@@ -120,9 +122,8 @@ def sigmoid_transition(current_weight, new_weight, num_iterations=6):
     delta_weight = new_weight - current_weight
     alpha = 4 / num_iterations  # Adjusted alpha based on desired iterations
     updated_weight = current_weight
-    for _ in range(num_iterations):
-        transition = sigmoid(alpha * delta_weight)
-        updated_weight += transition * delta_weight
+    transition = sigmoid(alpha * delta_weight)
+    updated_weight += transition * delta_weight
     return updated_weight
 
 
