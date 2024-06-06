@@ -23,17 +23,19 @@ class CC100(BaseDataset):
             "vi": 100_000,
             "zh": 100_000,
         }
-        language_alias = {
-            "zh": "zh-Hans"
-        }
+        language_alias = {"zh": "zh-Hans"}
         self.datasets = {}
         for language in self.languages_by_buffer_size:
             buffer_size = self.languages_by_buffer_size[language]
             dataset_language = language
             if language in language_alias:
                 dataset_language = language_alias[language]
-            streaming_dataset = load_dataset("cc100", dataset_language, split='train', streaming=True)
-            dataset = streaming_dataset.shuffle(seed=42, buffer_size=buffer_size).filter(self.filter_dataset)
+            streaming_dataset = load_dataset(
+                "cc100", dataset_language, split="train", streaming=True
+            )
+            dataset = streaming_dataset.shuffle(
+                seed=42, buffer_size=buffer_size
+            ).filter(self.filter_dataset)
             logger.info(f"Loading dataset for {language}")
             # streaming_dataset = load_dataset("cc100", dataset_language, split='train')
             # dataset = streaming_dataset.shuffle(seed=42).filter(self.filter_dataset)
@@ -43,7 +45,7 @@ class CC100(BaseDataset):
 
     @staticmethod
     def filter_dataset(example):
-        text = example['text'].strip()
+        text = example["text"].strip()
         return len(text) > 50
 
     def buffer_dataset(self, dataset, language):

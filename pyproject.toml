@@ -1,0 +1,18 @@
+[tool.mypy]
+strict = true
+exclude = ["tests", ".venv", "seamless_communication", "__pycache__", ".mypy_cache", ".pytest_cache", ".vscode", "env", "input", "output"]
+
+[tool.ruff]
+lint.select = ["E", "F"]
+lint.ignore = ["E501"]
+lint.fixable = ["A", "B", "C", "D", "E", "F"]
+lint.extend-select = ["C4", "SIM", "TCH"]
+lint.unfixable = []
+show-fixes = true
+exclude = ["tests", ".venv", "seamless_communication", "__pycache__", ".mypy_cache", ".pytest_cache", ".vscode", "env", "input", "output"]
+line-length = 88
+target-version = "py310"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+

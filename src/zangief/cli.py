@@ -1,4 +1,4 @@
-import typer 
+import typer
 from typing import Annotated
 
 from communex._common import get_node_url  # type: ignore

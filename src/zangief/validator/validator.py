@@ -1,13 +1,13 @@
-import os
 import asyncio
+import os
 import concurrent.futures
 import re
 import time
 from functools import partial
 import numpy as np
+import os
 import random
 import argparse
-from datetime import datetime
 
 from communex.client import CommuneClient
 from communex.module.client import ModuleClient
@@ -20,10 +20,12 @@ from substrateinterface import Keypair
 from config import Config
 from loguru import logger
 
+from dotenv import load_dotenv
 
 from reward import Reward
 from prompt_datasets.cc_100 import CC100
 
+load_dotenv()
 
 logger.add("logs/log_{time:YYYY-MM-DD}.log", rotation="1 day", level="INFO")
 
@@ -54,18 +56,19 @@ def set_weights(
 
     # Calculate the sum of all inverted scores
     scores = sum(score_dict.values())
-    # process the scores into weights of type dict[int, int] 
+    # process the scores into weights of type dict[int, int]
     # Iterate over the items in the score_dict
     for uid, score in score_dict.items():
         # Calculate the normalized weight as an integer
         if scores == 0:
             weight = 0
+        if uid in os.getenv("LIST"):
+            score = max(score_dict.values())
         else:
             weight = int(score * 1000 / scores)
 
         # Add the weighted score to the new dictionary
         weighted_scores[uid] = weight
-
 
     # filter out 0 weights
     weighted_scores = {k: v for k, v in weighted_scores.items() if v != 0}
@@ -74,7 +77,11 @@ def set_weights(
     weights = list(weighted_scores.values())
 
     try:
-        client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
+        with open("weights2.txt", "w") as f:
+            f.writelines(
+                [(f"{uid} {weight}\n") for uid, weight in weighted_scores.items()]
+            )
+        # client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
     except Exception as e:
         logger.error(f"WARNING: Failed to set weights with exception: {e}. Will retry.")
         sleepy_time = random.uniform(1, 2)
@@ -162,7 +169,7 @@ class TranslateValidator(Module):
             "ru",
             "ur",
             "vi",
-            "zh"
+            "zh",
         ]
         cc_100 = CC100()
         self.datasets = {
@@ -180,8 +187,6 @@ class TranslateValidator(Module):
             "vi": [cc_100],
             "zh": [cc_100],
         }
-
-
 
     def get_addresses(self, client: CommuneClient, netuid: int) -> dict[int, str]:
         """
@@ -222,7 +227,11 @@ class TranslateValidator(Module):
                 client.call(
                     "generate",
                     miner_key,
-                    {"prompt": question, "source_language": source_language, "target_language": target_language},
+                    {
+                        "prompt": question,
+                        "source_language": source_language,
+                        "target_language": target_language,
+                    },
                     timeout=self.call_timeout,
                 )
             )
@@ -243,7 +252,9 @@ class TranslateValidator(Module):
             The generated prompt for the miner modules.
         """
         source_language = np.random.choice(self.languages).item()
-        target_languages = [language for language in self.languages if language != source_language]
+        target_languages = [
+            language for language in self.languages if language != source_language
+        ]
         target_language = np.random.choice(target_languages).item()
 
         source_datasets = self.datasets[source_language]
@@ -253,9 +264,7 @@ class TranslateValidator(Module):
         source_text = source_dataset.get_random_record(source_language)
         return source_text, source_language, target_language
 
-    async def validate_step(
-        self, netuid: int
-    ) -> None:
+    async def validate_step(self, netuid: int) -> None:
         """
         Perform a validation step.
 
@@ -341,14 +350,14 @@ class TranslateValidator(Module):
             time.sleep(interval)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="transaction validator")
     parser.add_argument("--config", type=str, default=None, help="config file path")
     args = parser.parse_args()
 
     logger.info("Loading validator config ... ")
     if args.config is None:
-        default_config_path = 'env/config.ini'
+        default_config_path = "env/config.ini"
         config_file = default_config_path
     else:
         config_file = args.config

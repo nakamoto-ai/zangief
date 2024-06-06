@@ -9,3 +9,5 @@ unbabel-comet
 bert-score
 datasets
 langid
+openai
+huggingface-cli
