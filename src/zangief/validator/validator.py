@@ -7,6 +7,9 @@ from functools import partial
 import numpy as np
 import random
 import argparse
+import json
+import math
+from typing import Any, cast
 from datetime import datetime
 
 from communex.client import CommuneClient
@@ -15,6 +18,7 @@ from communex._common import get_node_url
 from communex.compat.key import classic_load_key
 from communex.module.module import Module
 from communex.types import Ss58Address
+from communex.misc import get_map_modules
 from substrateinterface import Keypair
 
 from config import Config
@@ -29,12 +33,10 @@ logger.add("logs/log_{time:YYYY-MM-DD}.log", rotation="1 day", level="INFO")
 
 IP_REGEX = re.compile(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+")
 
-
 def set_weights(
     score_dict: dict[
         int, float
     ],  # implemented as a float score from 0 to 1, one being the best
-    # you can implement your custom logic for scoring
     netuid: int,
     client: CommuneClient,
     key: Keypair,
@@ -48,30 +50,40 @@ def set_weights(
         client: The CommuneX client.
         key: The keypair for signing transactions.
     """
+    running_weights = get_running_weights()
+    running_uids = running_weights.keys()
+    new_uids = score_dict.keys()
 
-    # Create a new dictionary to store the weighted scores
+    # Tracks registers/de-registers
+    diff_registers = [n for n in new_uids if n not in running_uids] + [r for r in running_uids if r not in new_uids]
+    for uid in diff_registers:
+        running_weights[uid] = 0
+
     weighted_scores: dict[int, int] = {}
+    # Filters out miners that weren't scored
+    new_score_dict = {k: v for k, v in score_dict.items() if v != -1}
 
-    # Calculate the sum of all inverted scores
-    scores = sum(score_dict.values())
-    # process the scores into weights of type dict[int, int] 
-    # Iterate over the items in the score_dict
+    abnormal_scores = new_score_dict.values()
+    normal_scores = normalize_scores(abnormal_scores)
+
+    scores = sum(normal_scores)
+    new_score_uids = new_score_dict.keys()
+
     for uid, score in score_dict.items():
-        # Calculate the normalized weight as an integer
-        if scores == 0:
-            weight = 0
+        if uid not in new_score_uids:
+            weight = running_weights[uid]
         else:
-            weight = int(score * 1000 / scores)
-
-        # Add the weighted score to the new dictionary
+            new_weight = int(score * 1000 / scores)
+            old_weight = running_weights[uid].copy()
+            weight = sigmoid_transition(old_weight, new_weight)
         weighted_scores[uid] = weight
-
+        running_weights[uid] = weight
 
     # filter out 0 weights
     weighted_scores = {k: v for k, v in weighted_scores.items() if v != 0}
 
-    uids = list(weighted_scores.keys())
     weights = list(weighted_scores.values())
+    uids = list(weighted_scores.keys())
 
     try:
         client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
@@ -82,6 +94,55 @@ def set_weights(
         # retry with a different node
         client = CommuneClient(get_node_url())
         client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
+    finally:
+        save_running_weights(running_weights)
+
+def get_running_weights():
+    with open('running_weights.json', 'r', encoding='utf-8') as rw_file:
+        running_weights = json.load(rw_file)
+    print(f"Running Weights Before Scoring: {running_weights}")
+    return running_weights
+
+def sigmoid_transition(current_weight, new_weight, num_iterations=6):
+    """
+    Perform a sigmoid transition from current weight to new weight.
+    **Adjust 'num_iterations' according to needs**
+
+    Parameters:
+        current_weight (float): The current weight.
+        new_weight (float): The desired new weight.
+        num_iterations (int): Number of iterations for the transition.
+
+    Returns:
+        float: The updated weight after sigmoid transition.
+    """
+    sigmoid = lambda x: 1 / (1 + math.exp(-x))
+    delta_weight = new_weight - current_weight
+    alpha = 4 / num_iterations  # Adjusted alpha based on desired iterations
+    updated_weight = current_weight
+    for _ in range(num_iterations):
+        transition = sigmoid(alpha * delta_weight)
+        updated_weight += transition * delta_weight
+    return updated_weight
+
+
+def save_running_weights(running_weights):
+    with open('running_weights.json', 'w', encoding='utf-8') as rw_file:
+        json.dump(running_weights, rw_file)
+    print(f"Running Weights After Scoring: {running_weights}")
+
+
+def normalize_scores(scores):
+    min_score = min(scores)
+    max_score = max(scores)
+
+    if min_score == max_score:
+        # If all scores are the same, give all ones
+        return [1] * len(scores)
+
+    normalized_scores = [(score - min_score) / (max_score - min_score) for score in scores]
+
+    return normalized_scores
 
 
 def extract_address(string: str):
@@ -181,8 +242,6 @@ class TranslateValidator(Module):
             "zh": [cc_100],
         }
 
-
-
     def get_addresses(self, client: CommuneClient, netuid: int) -> dict[int, str]:
         """
         Retrieve all module addresses from the subnet.
@@ -232,8 +291,25 @@ class TranslateValidator(Module):
             miner_answer = None
         return miner_answer
 
-    def get_miners_to_query(self, miner_keys):
-        return miner_keys
+    def get_miners_to_query(self, miner_keys, num_miners_to_query=8):
+        miner_queue = self.load_queue()
+        for miner_key in miner_keys:
+            if miner_key not in miner_queue:
+                miner_queue.append(miner_key)
+        miner_queue = [m for m in miner_queue if m in miner_keys]
+        next_miners = miner_queue.copy()[:num_miners_to_query-1]
+        new_miner_queue = miner_queue[num_miners_to_query:] + next_miners
+        self.save_queue(new_miner_queue)
+        return new_miner_queue
+
+    def load_queue(self):
+        with open('miner_queue.json', 'r', encoding='utf-8') as mq_file:
+            miner_queue = json.load(mq_file)
+        return miner_queue
+
+    def save_queue(self, miner_queue):
+        with open('miner_queue.json', 'w', encoding='utf-8') as mq_file:
+            json.dump(miner_queue, mq_file)
 
     def get_miner_prompt(self) -> tuple:
         """
@@ -318,7 +394,10 @@ class TranslateValidator(Module):
         logger.debug(scores)
 
         for uid, score in zip(modules_info.keys(), scores):
-            score_dict[uid] = score
+            if uid in miner_uids:
+                score_dict[uid] = score
+            else:
+                score_dict[uid] = -1
 
         logger.info("Miner UIDs")
         logger.info(miner_uids)
@@ -339,6 +418,60 @@ class TranslateValidator(Module):
             interval = int(config.validator.get("interval"))
             logger.info(f"Sleeping for {interval} seconds ... ")
             time.sleep(interval)
+
+    def reset_queue(self):
+        with open('miner_queue.json', 'w', encoding='utf-8') as mq_file:
+            json.dump([], mq_file)
+
+    def reset_running_weights(self):
+        emissions = self.get_current_emissions()
+        weights = self.normalize_emissions(emissions)
+        save_running_weights(weights)
+
+    def normalize_emissions(self, emissions):
+        values = emissions.values()
+        min_val = min(values)
+        max_val = max(values)
+        normalized_values = [(v - min_val) / (max_val - min_val) for v in values]
+        normalized_emissions = zip(emissions.keys(), normalized_values)
+        return normalized_emissions
+
+    def get_current_emissions(self):
+        netuid = 5
+        request_dict = {
+            "SubspaceModule": [
+                ("Name", [netuid]),
+                ("Emission", []),
+                ("Incentive", []),
+                ("Dividends", []),
+            ],
+        }
+        emission_dict = {}
+        result = self.client.query_batch_map(request_dict)
+
+        emission = result["Emission"]
+        netuid_emission = emission[netuid]
+        validator_uids = self.get_validator_uids()
+        names = result["Name"]
+        highest_uid = max(names.keys())
+        for uid_int in range(highest_uid + 1):
+            uid = str(uid_int)
+            if uid not in validator_uids:
+                emission_dict[uid] = netuid_emission[uid]
+        return emission_dict
+
+    def get_validator_uids(self):
+        modules = cast(dict[str, Any], get_map_modules(self.client, netuid=5))
+        modules = [value for _, value in modules.items()]
+        validator_uids = []
+        for module in modules:
+            if not (module["incentive"] == module["dividends"] == 0 or module["incentive"] > module["dividends"]):
+                validator_uids.append(str(module['uid']))
+        return validator_uids
+
+    def reset(self):
+        self.reset_running_weights()
+        self.reset_queue()
 
 
 if __name__ == '__main__':
@@ -369,5 +502,6 @@ if __name__ == '__main__':
         c_client,
         call_timeout=20,
     )
+    validator.reset()
     logger.info("Running validator ... ")
     validator.validation_loop(config)
