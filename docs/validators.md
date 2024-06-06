@@ -46,7 +46,19 @@ source venv/bin/activate
 
 `comx module register <name> <your_commune_key> --netuid 1`
 
-4) Run the validator
+4) Set the environment variables
+
+Copy the environment variable template and set the values in the `.env` file.
+
+```bash
+cp env/.example.env env/.env
+```
+
+**Using a `.env` file will override any environment variables already set.**
+
+Alternatively, if you do not want to use a `.env` file you can set the environment variables directly and pass `--ignore-config` when running the validator.
+
+5) Run the validator
 
 ```
 python src/zangief/validator/validator.py

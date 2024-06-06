@@ -19,3 +19,7 @@ node_modules
 /.tests
 __pycache__
 scripts
+
+# Exception: Do not ignore .example.env files only within the env directory
+!/env/*.example.env
+!/env/**/*.example.env

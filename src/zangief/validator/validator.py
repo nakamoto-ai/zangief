@@ -353,15 +353,16 @@ class TranslateValidator(Module):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="transaction validator")
     parser.add_argument("--config", type=str, default=None, help="config file path")
+    parser.add_argument('--ignore-config', action='store_true', help="ignore the env file")
     args = parser.parse_args()
 
     logger.info("Loading validator config ... ")
     if args.config is None:
-        default_config_path = "env/config.ini"
+        default_config_path = "env/.env"
         config_file = default_config_path
     else:
         config_file = args.config
-    config = Config(config_file=config_file)
+    config = Config(config_file=config_file, ignore_config=args.ignore_config)  
 
     use_testnet = True if config.validator.get("testnet") == "1" else False
     if use_testnet:
