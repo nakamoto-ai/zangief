@@ -302,7 +302,7 @@ class TranslateValidator(Module):
         next_miners = miner_queue.copy()[:num_miners_to_query-1]
         new_miner_queue = miner_queue[num_miners_to_query:] + next_miners
         self.save_queue(new_miner_queue)
-        return new_miner_queue
+        return next_miners
 
     def load_queue(self):
         with open('miner_queue.json', 'r', encoding='utf-8') as mq_file:
