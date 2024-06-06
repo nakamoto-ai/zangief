@@ -33,6 +33,7 @@ logger.add("logs/log_{time:YYYY-MM-DD}.log", rotation="1 day", level="INFO")
 
 IP_REGEX = re.compile(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+")
 
+
 def set_weights(
     score_dict: dict[
         int, float
@@ -331,7 +332,7 @@ class TranslateValidator(Module):
         return source_text, source_language, target_language
 
     async def validate_step(
-        self, netuid: int
+        self, netuid: int, sync_weights_every_step=False
     ) -> None:
         """
         Perform a validation step.
@@ -341,6 +342,7 @@ class TranslateValidator(Module):
 
         Args:
             netuid: The network UID of the subnet.
+            sync_weights_every_step: Determines whether it gets the miners' current weights from substrate every step
         """
         try:
             modules_addresses = self.get_addresses(self.client, netuid)
@@ -354,6 +356,9 @@ class TranslateValidator(Module):
         if val_ss58 not in modules_keys.values():
             logger.error(f"Validator key {val_ss58} is not registered in subnet")
             return None
+
+        if sync_weights_every_step:
+            self.reset_running_weights()
 
         miners_to_query = self.get_miners_to_query(modules_keys.keys())
 
@@ -438,7 +443,7 @@ class TranslateValidator(Module):
         return normalized_emissions
 
     def get_current_emissions(self):
-        netuid = 5
+        netuid = 1
         request_dict = {
             "SubspaceModule": [
                 ("Name", [netuid]),
