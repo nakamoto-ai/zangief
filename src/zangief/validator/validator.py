@@ -11,6 +11,7 @@ import json
 import math
 from typing import Any, cast
 from datetime import datetime
+import copy
 
 from communex.client import CommuneClient
 from communex.module.client import ModuleClient
@@ -75,7 +76,7 @@ def set_weights(
             weight = running_weights[uid]
         else:
             new_weight = int(score * 1000 / scores)
-            old_weight = running_weights[uid].copy()
+            old_weight = copy.copy(running_weights[uid])
             weight = sigmoid_transition(old_weight, new_weight)
         weighted_scores[uid] = weight
         running_weights[uid] = weight
@@ -142,9 +143,12 @@ def normalize_scores(scores):
         # If all scores are the same, give all ones
         return [1] * len(scores)
 
+    # Normalize scores from 0 to 1
     normalized_scores = [(score - min_score) / (max_score - min_score) for score in scores]
 
-    return normalized_scores
+    # Scale normalized scores from min_score to 1
+    scaled_scores = [score * (1 - min_score) + min_score for score in normalized_scores]
+    return scaled_scores
 
 
 def extract_address(string: str):
@@ -438,12 +442,17 @@ class TranslateValidator(Module):
         values = emissions.values()
         min_val = min(values)
         max_val = max(values)
-        normalized_values = [(v - min_val) / (max_val - min_val) for v in values]
-        normalized_emissions = zip(emissions.keys(), normalized_values)
+        if max_val == min_val:
+            normalized_values = [1] * len(values)
+        else:
+            normalized_values = [(v - min_val) / (max_val - min_val) for v in values]
+        normalized_emissions = {}
+        for i, emit_key in enumerate(emissions.keys()):
+            normalized_emissions[emit_key] = normalized_values[i]
         return normalized_emissions
 
     def get_current_emissions(self):
-        netuid = 1
+        netuid = self.netuid
         request_dict = {
             "SubspaceModule": [
                 ("Name", [netuid]),
@@ -454,14 +463,12 @@ class TranslateValidator(Module):
         }
         emission_dict = {}
         result = self.client.query_batch_map(request_dict)
-
         emission = result["Emission"]
         netuid_emission = emission[netuid]
         validator_uids = self.get_validator_uids()
         names = result["Name"]
         highest_uid = max(names.keys())
-        for uid_int in range(highest_uid + 1):
-            uid = str(uid_int)
+        for uid in range(highest_uid + 1):
             if uid not in validator_uids:
                 emission_dict[uid] = netuid_emission[uid]
         return emission_dict
