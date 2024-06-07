@@ -1,6 +1,6 @@
 import torch
 from transformers import M2M100ForConditionalGeneration, M2M100Tokenizer
-from .base_miner import BaseMiner
+from base_miner import BaseMiner
 
 
 class M2MMiner(BaseMiner):
@@ -50,9 +50,7 @@ class M2MMiner(BaseMiner):
                 top_k=self.top_k,
             )
 
-        return self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)[
-            0
-        ]
+        return self.tokenizer.batch_decode(generated_tokens, skip_special_tokens=True)[0]
 
 
 if __name__ == "__main__":
