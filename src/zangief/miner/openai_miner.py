@@ -1,8 +1,8 @@
 from openai import OpenAI, APIError
 from loguru import logger
 from openai.types.chat.chat_completion import ChatCompletion
-from src.zangief.miner.base_miner import BaseMiner
-from src.zangief.miner.config import Config
+from base_miner import BaseMiner
+from config import Config
 
 
 class OpenAIMiner(BaseMiner):
