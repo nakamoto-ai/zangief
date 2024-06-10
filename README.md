@@ -6,7 +6,7 @@
 ### by Nakamoto Mining
 # Documentation
 
-[Miner Docs](docs/miners.md) | [Validator Docs](docs/validators.md) | [Discord](https://discord.com) | [Leaderboard](https://fa7059c84c27288fd6.gradio.live)
+[Miner Docs](docs/miners.md) | [Validator Docs](docs/validators.md) | [Discord](https://discord.com) | [Leaderboard](https://huggingface.co/spaces/ashikshaffi08/Zangief-Leaderboard)
 
 # Purpose
 
