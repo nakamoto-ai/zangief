@@ -1,4 +1,5 @@
 import os
+import json
 import asyncio
 import concurrent.futures
 import re
@@ -147,6 +148,7 @@ class TranslateValidator(Module):
         self.key = key
         self.netuid = netuid
         self.call_timeout = call_timeout
+        self.ensure_weights_file()
 
         self.reward = Reward()
         self.languages = [
@@ -181,7 +183,21 @@ class TranslateValidator(Module):
             "zh": [cc_100],
         }
 
+    def ensure_weights_file(self):
+        home_dir = os.path.expanduser("~")
+        commune_dir = os.path.join(home_dir, ".commune")
+        zangief_dir = os.path.join(commune_dir, "zangief")
 
+        if not os.path.exists(zangief_dir):
+            os.makedirs(zangief_dir)
+            logger.info(f"Created directory: {zangief_dir}")
+
+        weights_file = os.path.join(zangief_dir, "weights.json")
+
+        if not os.path.exists(weights_file):
+            with open(weights_file, 'w') as file:
+                json.dump({}, file)
+            logger.info(f"Created file: {weights_file}")
 
     def get_addresses(self, client: CommuneClient, netuid: int) -> dict[int, str]:
         """
