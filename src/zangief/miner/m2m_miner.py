@@ -6,9 +6,9 @@ from base_miner import BaseMiner
 
 class M2MMiner(BaseMiner):
 
-    def __init__(self):
+    def __init__(self, config):
         super().__init__()
-        config = self.get_config()
+        self.config = config
         self.model_name = config.get_value("model", "facebook/m2m100_1.2B")
         self.device = config.get_value("device", "cuda:0")
         self.max_length = config.get_value("max_length", 1024)
@@ -49,7 +49,3 @@ class M2MMiner(BaseMiner):
         )[0]
 
         return translation
-
-if __name__ == "__main__":
-    miner = M2MMiner()
-    M2MMiner.start_miner_server(miner)

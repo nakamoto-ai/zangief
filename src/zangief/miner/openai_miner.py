@@ -2,14 +2,12 @@ from openai import OpenAI, APIError
 from loguru import logger
 from openai.types.chat.chat_completion import ChatCompletion
 from base_miner import BaseMiner
-from config import Config
-
 
 class OpenAIMiner(BaseMiner):
 
-    def __init__(self) -> None:
+    def __init__(self, config) -> None:
         super().__init__()
-        config: Config = self.get_config()
+        self.config = config 
         self.max_tokens = int(str(config.get_value(option="max_tokens", default=1000)))
         self.temperature = config.get_value(option="temperature", default=0.1)
         self.model = str(
@@ -46,8 +44,3 @@ class OpenAIMiner(BaseMiner):
             translation = None
 
         return translation
-
-
-if __name__ == "__main__":
-    miner = OpenAIMiner()
-    OpenAIMiner.start_miner_server(miner=miner)

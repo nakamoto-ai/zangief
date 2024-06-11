@@ -61,7 +61,7 @@ model = gpt-3.5-turbo
 6) Run the miner
 
 ```
-python src/zangief/miner/openai_miner.py
+python src/zangief/miner/miner.py --miner openai
 ```
 
 (Optional) Run with pm2 
@@ -112,7 +112,7 @@ source venv/bin/activate
 5) Run the miner
 
 ```
-python src/zangief/miner/m2m_miner.py
+python src/zangief/miner/miner.py --miner m2m
 ```
 
 (Optional) Run with pm2 
