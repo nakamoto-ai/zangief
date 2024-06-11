@@ -1,7 +1,5 @@
 import argparse
 from config import Config
-from m2m_miner import M2MMiner
-from openai_miner import OpenAIMiner
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="transaction validator")
@@ -12,9 +10,11 @@ if __name__ == "__main__":
     config = Config(config_file=args.config)
 
     if args.miner == "m2m":
+        from m2m_miner import M2MMiner
         miner = M2MMiner(config=config)
         M2MMiner.start_miner_server(miner=miner)
     elif args.miner == "openai":
+        from openai_miner import OpenAIMiner
         miner = OpenAIMiner(config=config)
         OpenAIMiner.start_miner_server(miner=miner)
     else:
