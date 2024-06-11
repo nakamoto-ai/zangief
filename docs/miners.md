@@ -68,7 +68,7 @@ python src/zangief/miner/miner.py --miner openai
 
 ```
 sudo apt install jq -y && sudo apt install npm -y && sudo npm install pm2 -g && pm2 update
-pm2 start --name zangief-openai "python src/zangief/miner/openai_miner.py"
+pm2 start --name zangief-openai "python src/zangief/miner/miner.py --miner openai"
 ```
 
 ## How To run the M2M_100 miner:
@@ -119,5 +119,5 @@ python src/zangief/miner/miner.py --miner m2m
 
 ```
 sudo apt install jq -y && sudo apt install npm -y && sudo npm install pm2 -g && pm2 update
-pm2 start --name zangief-m2m_100 "python src/zangief/miner/m2m_miner.py"
+pm2 start --name zangief-m2m_100 "python src/zangief/miner/miner.py --miner m2m"
 ```
