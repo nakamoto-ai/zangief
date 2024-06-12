@@ -199,6 +199,27 @@ class TranslateValidator(Module):
                 json.dump({}, file)
             logger.info(f"Created file: {weights_file}")
 
+    def write_weight_file(self, modules_info: dict[int, tuple[float, Ss58Address]]):
+        """
+        Writes the modules and their scores to the weights.json file. Each module
+        entry will contain the UID, SS58 address, and score.
+
+        Args:
+            modules_info: A dictionary mapping module UIDs to their addresses and score.
+        """
+
+        # TODO: Parse the data and write to the the file.
+
+    def read_weight_file(self) -> dict[int, tuple[float, Ss58Address]]:
+        """
+        Reads the modules and their scores from the weights.json file. 
+
+        Returns:
+            A dictionary mapping module UIDs to their addresses and score.
+        """
+
+        # TODO: Read the data from the file and return as a dict[int, tuple[float, Ss58Address]]
+
     def get_addresses(self, client: CommuneClient, netuid: int) -> dict[int, str]:
         """
         Retrieve all module addresses from the subnet.
