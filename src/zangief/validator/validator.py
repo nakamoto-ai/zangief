@@ -9,6 +9,7 @@ import numpy as np
 import random
 import argparse
 from datetime import datetime
+from itertools import islice
 
 from communex.client import CommuneClient
 from communex.module.client import ModuleClient
@@ -17,6 +18,7 @@ from communex.compat.key import classic_load_key
 from communex.module.module import Module
 from communex.types import Ss58Address
 from substrateinterface import Keypair
+from .sigmoid import sigmoid_rewards
 
 from config import Config
 from loguru import logger
@@ -29,60 +31,6 @@ from prompt_datasets.cc_100 import CC100
 logger.add("logs/log_{time:YYYY-MM-DD}.log", rotation="1 day", level="INFO")
 
 IP_REGEX = re.compile(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+")
-
-
-def set_weights(
-    score_dict: dict[
-        int, float
-    ],  # implemented as a float score from 0 to 1, one being the best
-    # you can implement your custom logic for scoring
-    netuid: int,
-    client: CommuneClient,
-    key: Keypair,
-) -> None:
-    """
-    Set weights for miners based on their scores.
-
-    Args:
-        score_dict: A dictionary mapping miner UIDs to their scores.
-        netuid: The network UID.
-        client: The CommuneX client.
-        key: The keypair for signing transactions.
-    """
-
-    # Create a new dictionary to store the weighted scores
-    weighted_scores: dict[int, int] = {}
-
-    # Calculate the sum of all inverted scores
-    scores = sum(score_dict.values())
-    # process the scores into weights of type dict[int, int]
-    # Iterate over the items in the score_dict
-    for uid, score in score_dict.items():
-        # Calculate the normalized weight as an integer
-        if scores == 0:
-            weight = 0
-        else:
-            weight = int(score * 1000 / scores)
-
-        # Add the weighted score to the new dictionary
-        weighted_scores[uid] = weight
-
-
-    # filter out 0 weights
-    weighted_scores = {k: v for k, v in weighted_scores.items() if v != 0}
-
-    uids = list(weighted_scores.keys())
-    weights = list(weighted_scores.values())
-
-    try:
-        client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
-    except Exception as e:
-        logger.error(f"WARNING: Failed to set weights with exception: {e}. Will retry.")
-        sleepy_time = random.uniform(1, 2)
-        time.sleep(sleepy_time)
-        # retry with a different node
-        client = CommuneClient(get_node_url())
-        client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
 
 
 def extract_address(string: str):
@@ -115,6 +63,22 @@ def get_netuid(is_testnet):
         return 23
     else:
         return 1
+
+
+def normalize_scores(scores):
+    min_score = min(scores)
+    max_score = max(scores)
+
+    if min_score == max_score:
+        # If all scores are the same, give all ones
+        return [1] * len(scores)
+
+    # Normalize scores from 0 to 1
+    normalized_scores = [(score - min_score) / (max_score - min_score) for score in scores]
+
+    # Scale normalized scores from min_score to 1
+    scaled_scores = [score * (1 - min_score) + min_score for score in normalized_scores]
+    return scaled_scores
 
 
 class TranslateValidator(Module):
@@ -153,7 +117,9 @@ class TranslateValidator(Module):
         commune_dir = os.path.join(home_dir, ".commune")
         self.zangief_dir = os.path.join(commune_dir, "zangief")
         self.weights_file = os.path.join(self.zangief_dir, "weights.json")
+        self.current_miners_file = os.path.join(self.zangief_dir, "current_miners.json")
         self.ensure_weights_file()
+        self.ensure_current_miners_file()
 
         self.reward = Reward()
         self.languages = [
@@ -235,6 +201,102 @@ class TranslateValidator(Module):
 
         return modules_info
 
+    def sync_weight_file(self, scores):
+        self.ensure_weights_file()
+        current_weights = self.read_weight_file()
+        new_current_weights = {}
+        scored_miners = {}
+        for uid, (score, address) in scores.items():
+            if score == -1:
+                continue
+            uid = int(uid)
+            if uid in current_weights and current_weights[uid][1] == address:
+                new_current_weights[uid] = scores[uid]
+            else:
+                new_current_weights[uid] = (score, address)
+            scored_miners[uid] = (True, address)
+        self.mark_miners_as_scored(scored_miners)
+
+    def ensure_current_miners_file(self):
+        if not os.path.exists(self.zangief_dir):
+            os.makedirs(self.zangief_dir)
+            logger.info(f"Created directory: {self.zangief_dir}")
+
+        if not os.path.exists(self.current_miners_file):
+            with open(self.current_miners_file, 'w') as file:
+                json.dump({}, file)
+            logger.info(f"Created file: {self.current_miners_file}")
+
+    def write_current_miners_file(self, modules_info: dict[int, tuple[bool, Ss58Address]]):
+        """
+        Writes the modules and whether they've been scored in the current cycle. Each module
+        entry will contain the UID, SS58 address, and a bool value to determine if they've been scored.
+
+        Args:
+            modules_info: A dictionary mapping module UIDs to their addresses and whether they've been scored.
+        """
+        serializable_data = {
+            uid: {"scored": scored, "address": address}
+            for uid, (scored, address) in modules_info.items()
+        }
+        current_miners = self.read_current_miners_file()
+        for uid, (scored, address) in modules_info.items():
+            current_miners[uid] = {'scored': scored, 'address': address}
+
+        with open(self.current_miners_file, 'w') as file:
+            json.dump(serializable_data, file, indent=4)
+
+    def read_current_miners_file(self):
+        """
+        Reads the modules from the current_miners.json file.
+
+        Returns:
+            A dictionary mapping module UIDs to their addresses and whether they've been scored.
+        """
+        if not os.path.exists(self.current_miners_file):
+            return {}
+
+        with open(self.current_miners_file, 'r') as file:
+            data = json.load(file)
+
+        modules_info = {
+            int(uid): (info["scored"], info["address"])
+            for uid, info in data.items()
+        }
+
+        return modules_info
+
+    def clear_current_miners_file(self):
+        self.ensure_current_miners_file()
+        with open(self.current_miners_file, 'w') as file:
+            json.dump({}, file, indent=4)
+
+    def reset_current_miners_file(self):
+        self.clear_current_miners_file()
+        current_miners = self.read_current_miners_file()
+        for uid, (scored, address) in current_miners:
+            current_miners[uid] = (False, address)
+        self.write_current_miners_file(current_miners)
+
+    def sync_current_miners_file(self, modules):
+        self.ensure_current_miners_file()
+        current_miners = self.read_current_miners_file()
+        new_current_miners = {}
+        for uid, address in modules.items():
+            uid = int(uid)
+            # Check if the miner exists and whether the address has changed
+            if uid in current_miners and current_miners[uid][1] == address:
+                new_current_miners[uid] = current_miners[uid]
+            else:
+                new_current_miners[uid] = (False, address)
+        self.write_current_miners_file(new_current_miners)
+
+    def mark_miners_as_scored(self, scored_miners):
+        current_miners = self.read_current_miners_file()
+        for uid, (scored, address) in scored_miners.items():
+            current_miners[uid] = (scored, address)
+        self.write_current_miners_file(current_miners)
+
     def get_addresses(self, client: CommuneClient, netuid: int) -> dict[int, str]:
         """
         Retrieve all module addresses from the subnet.
@@ -284,8 +346,11 @@ class TranslateValidator(Module):
             miner_answer = None
         return miner_answer
 
-    def get_miners_to_query(self, miner_keys):
-        return miner_keys
+    def get_miners_to_query(self):
+        miners_per_step = 8
+        current_miners = self.read_current_miners_file()
+        # Use a generator to filter miners and `islice` to stop after collecting enough miners
+        return list(islice((uid for uid, data in current_miners.items() if not data[0]), miners_per_step))
 
     def get_miner_prompt(self) -> tuple:
         """
@@ -330,7 +395,8 @@ class TranslateValidator(Module):
             logger.error(f"Validator key {val_ss58} is not registered in subnet")
             return None
 
-        miners_to_query = self.get_miners_to_query(modules_keys.keys())
+        self.sync_current_miners_file(modules_keys)
+        miners_to_query = self.get_miners_to_query(modules_keys)
 
         modules_info: dict[int, tuple[list[str], Ss58Address]] = {}
         miner_uids = []
@@ -342,7 +408,7 @@ class TranslateValidator(Module):
             modules_info[module_id] = (module_addr, modules_keys[module_id])
             miner_uids.append(module_id)
 
-        score_dict: dict[int, float] = {}
+        score_dict: dict[dict[float, Ss58Address]] = {}
 
         miner_prompt, source_language, target_language = self.get_miner_prompt()
 
@@ -370,7 +436,16 @@ class TranslateValidator(Module):
         logger.debug(scores)
 
         for uid, score in zip(modules_info.keys(), scores):
-            score_dict[uid] = score
+            if uid in miners_to_query:
+                score_dict[uid] = {
+                    'score': score,
+                    'address': modules_info[uid][1]
+                }
+            else:
+                score_dict[uid] = {
+                    'score': -1,
+                    'address': modules_info[uid][1]
+                }
 
         logger.info("Miner UIDs")
         logger.info(miner_uids)
@@ -381,7 +456,11 @@ class TranslateValidator(Module):
             logger.info("No miner returned a valid answer")
             return None
 
-        set_weights(score_dict, self.netuid, self.client, self.key)
+        self.sync_weight_file(score_dict)
+
+        if not self.get_miners_to_query():
+            self.set_weights(self.netuid, self.client, self.key)
+            self.reset_current_miners_file()
 
     def validation_loop(self, config: Config | None = None) -> None:
         while True:
@@ -391,6 +470,47 @@ class TranslateValidator(Module):
             interval = int(config.validator.get("interval"))
             logger.info(f"Sleeping for {interval} seconds ... ")
             time.sleep(interval)
+
+    def set_weights(
+        self,  # implemented as a float score from 0 to 1, one being the best
+        # you can implement your custom logic for scoring
+        netuid: int,
+        client: CommuneClient,
+        key: Keypair,
+    ) -> None:
+        """
+        Set weights for miners based on their scores.
+
+        Args:
+            score_dict: A dictionary mapping miner UIDs to their scores and ss58 addresses
+            netuid: The network UID.
+            client: The CommuneX client.
+            key: The keypair for signing transactions.
+        """
+        full_score_dict = self.read_weight_file()
+        # Create a new dictionary to store the weighted scores
+        weighted_scores: dict[int, int] = {}
+
+        abnormal_scores = [score for uid, (score, address) in full_score_dict]
+        normal_scores = normalize_scores(abnormal_scores)
+        score_dict = {uid: score for uid, score in zip(full_score_dict.keys(), normal_scores)}
+        sigmoided_scores = sigmoid_rewards(score_dict)
+
+        # filter out 0 weights
+        weighted_scores = {k: v for k, v in sigmoided_scores.items() if v != 0}
+
+        uids = list(weighted_scores.keys())
+        weights = list(weighted_scores.values())
+
+        try:
+            client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
+        except Exception as e:
+            logger.error(f"WARNING: Failed to set weights with exception: {e}. Will retry.")
+            sleepy_time = random.uniform(1, 2)
+            time.sleep(sleepy_time)
+            # retry with a different node
+            client = CommuneClient(get_node_url())
+            client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
 
 
 if __name__ == '__main__':
