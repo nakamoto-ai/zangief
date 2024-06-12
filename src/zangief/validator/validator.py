@@ -206,8 +206,14 @@ class TranslateValidator(Module):
         Args:
             modules_info: A dictionary mapping module UIDs to their addresses and score.
         """
+        serializable_data = {
+            uid: {"score": score, "address": address}
+            for uid, (score, address) in modules_info.items()
+        }
 
-        # TODO: Parse the data and write to the the file.
+        # Write the JSON structure to the file
+        with open(self.weights_file, 'w') as file:
+            json.dump(serializable_data, file, indent=4)
 
     def read_weight_file(self) -> dict[int, tuple[float, Ss58Address]]:
         """
@@ -216,8 +222,18 @@ class TranslateValidator(Module):
         Returns:
             A dictionary mapping module UIDs to their addresses and score.
         """
+        if not os.path.exists(self.weights_file):
+            return {}
 
-        # TODO: Read the data from the file and return as a dict[int, tuple[float, Ss58Address]]
+        with open(self.weights_file, 'r') as file:
+            data = json.load(file)
+
+        modules_info = {
+            int(uid): (info["score"], info["address"])
+            for uid, info in data.items()
+        }
+
+        return modules_info
 
     def get_addresses(self, client: CommuneClient, netuid: int) -> dict[int, str]:
         """
