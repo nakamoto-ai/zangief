@@ -148,6 +148,11 @@ class TranslateValidator(Module):
         self.key = key
         self.netuid = netuid
         self.call_timeout = call_timeout
+
+        home_dir = os.path.expanduser("~")
+        commune_dir = os.path.join(home_dir, ".commune")
+        self.zangief_dir = os.path.join(commune_dir, "zangief")
+        self.weights_file = os.path.join(self.zangief_dir, "weights.json")
         self.ensure_weights_file()
 
         self.reward = Reward()
@@ -184,20 +189,14 @@ class TranslateValidator(Module):
         }
 
     def ensure_weights_file(self):
-        home_dir = os.path.expanduser("~")
-        commune_dir = os.path.join(home_dir, ".commune")
-        zangief_dir = os.path.join(commune_dir, "zangief")
+        if not os.path.exists(self.zangief_dir):
+            os.makedirs(self.zangief_dir)
+            logger.info(f"Created directory: {self.zangief_dir}")
 
-        if not os.path.exists(zangief_dir):
-            os.makedirs(zangief_dir)
-            logger.info(f"Created directory: {zangief_dir}")
-
-        weights_file = os.path.join(zangief_dir, "weights.json")
-
-        if not os.path.exists(weights_file):
-            with open(weights_file, 'w') as file:
+        if not os.path.exists(self.weights_file):
+            with open(self.weights_file, 'w') as file:
                 json.dump({}, file)
-            logger.info(f"Created file: {weights_file}")
+            logger.info(f"Created file: {self.weights_file}")
 
     def write_weight_file(self, modules_info: dict[int, tuple[float, Ss58Address]]):
         """
