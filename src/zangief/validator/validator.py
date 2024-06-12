@@ -204,18 +204,15 @@ class TranslateValidator(Module):
     def sync_weight_file(self, scores):
         self.ensure_weights_file()
         current_weights = self.read_weight_file()
-        new_current_weights = {}
         scored_miners = {}
         for uid, (score, address) in scores.items():
             if score == -1:
                 continue
             uid = int(uid)
-            if uid in current_weights and current_weights[uid][1] == address:
-                new_current_weights[uid] = scores[uid]
-            else:
-                new_current_weights[uid] = (score, address)
+            current_weights[uid] = scores[uid]
             scored_miners[uid] = (True, address)
         self.mark_miners_as_scored(scored_miners)
+        self.write_weight_file(current_weights)
 
     def ensure_current_miners_file(self):
         if not os.path.exists(self.zangief_dir):
@@ -272,7 +269,6 @@ class TranslateValidator(Module):
             json.dump({}, file, indent=4)
 
     def reset_current_miners_file(self):
-        self.clear_current_miners_file()
         current_miners = self.read_current_miners_file()
         for uid, (scored, address) in current_miners:
             current_miners[uid] = (False, address)
@@ -281,15 +277,12 @@ class TranslateValidator(Module):
     def sync_current_miners_file(self, modules):
         self.ensure_current_miners_file()
         current_miners = self.read_current_miners_file()
-        new_current_miners = {}
         for uid, address in modules.items():
             uid = int(uid)
             # Check if the miner exists and whether the address has changed
-            if uid in current_miners and current_miners[uid][1] == address:
-                new_current_miners[uid] = current_miners[uid]
-            else:
-                new_current_miners[uid] = (False, address)
-        self.write_current_miners_file(new_current_miners)
+            if not (uid in current_miners and current_miners[uid][1] == address):
+                current_miners[uid] = (False, address)
+        self.write_current_miners_file(current_miners)
 
     def mark_miners_as_scored(self, scored_miners):
         current_miners = self.read_current_miners_file()
@@ -472,8 +465,7 @@ class TranslateValidator(Module):
             time.sleep(interval)
 
     def set_weights(
-        self,  # implemented as a float score from 0 to 1, one being the best
-        # you can implement your custom logic for scoring
+        self,
         netuid: int,
         client: CommuneClient,
         key: Keypair,
@@ -482,22 +474,24 @@ class TranslateValidator(Module):
         Set weights for miners based on their scores.
 
         Args:
-            score_dict: A dictionary mapping miner UIDs to their scores and ss58 addresses
             netuid: The network UID.
             client: The CommuneX client.
             key: The keypair for signing transactions.
         """
         full_score_dict = self.read_weight_file()
-        # Create a new dictionary to store the weighted scores
         weighted_scores: dict[int, int] = {}
 
         abnormal_scores = [score for uid, (score, address) in full_score_dict]
         normal_scores = normalize_scores(abnormal_scores)
         score_dict = {uid: score for uid, score in zip(full_score_dict.keys(), normal_scores)}
         sigmoided_scores = sigmoid_rewards(score_dict)
+        scores = sum(sigmoided_scores.values())
 
-        # filter out 0 weights
-        weighted_scores = {k: v for k, v in sigmoided_scores.items() if v != 0}
+        for uid, score in sigmoided_scores.items():
+            weight = int(score * 1000 / scores)
+            weighted_scores[uid] = weight
+
+        weighted_scores = {k: v for k, v in weighted_scores.items() if v != 0}
 
         uids = list(weighted_scores.keys())
         weights = list(weighted_scores.values())
