@@ -18,7 +18,7 @@ from communex.module.module import Module
 from communex.types import Ss58Address
 from communex.misc import get_map_modules
 from substrateinterface import Keypair
-from weights_io import ensure_weights_file, write_weight_file
+from weights_io import ensure_weights_file, write_weight_file, read_weight_file
 
 from config import Config
 from loguru import logger
@@ -354,7 +354,9 @@ class TranslateValidator(Module):
             data_to_write[uid] = {"ss58": ss58, "score": score}
 
         write_weight_file(self.weights_file, data_to_write)
-
+        ddd = read_weight_file(self.weights_file)
+        logger.info(f"READ DATA: {ddd}")
+        
         logger.info("Miner UIDs")
         logger.info(miner_uids)
         logger.info("Final scores")

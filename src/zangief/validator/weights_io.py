@@ -25,3 +25,18 @@ def write_weight_file(weights_file, modules_info: dict[int, dict[str, float]]):
     # Write the JSON structure to the file
     with open(weights_file, 'w') as file:
         json.dump(modules_info, file, indent=4)
+
+def read_weight_file(weights_file):
+    """
+    Reads the modules and their scores from the weights.json file. 
+
+    Returns:
+        A dictionary mapping module UIDs to their addresses and score.
+    """
+    if not os.path.exists(weights_file):
+        return {}
+
+    with open(weights_file, 'r') as file:
+        data = json.load(file)
+
+    return data
