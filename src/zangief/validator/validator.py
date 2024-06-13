@@ -292,6 +292,8 @@ class TranslateValidator(Module):
         miners_to_query = []
         counter = 0
 
+        logger.info(f"SCORED_MINERSa: {scored_miners}")
+
         for i, m in enumerate(miners):
             if m['uid'] in scored_miners:
                 if m['key'] != scored_miners[m['uid']]['ss58']:
@@ -309,6 +311,9 @@ class TranslateValidator(Module):
             if counter == 8:
                 break 
 
+        logger.info(f"SCORED_MINERSb: {scored_miners}")
+        logger.info(f"MINERS_TO_QUERY: {miners_to_query}")
+        
         return remaining_miners, miners_to_query
 
     def get_miner_prompt(self) -> tuple:
