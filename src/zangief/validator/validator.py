@@ -428,6 +428,7 @@ class TranslateValidator(Module):
             for uid, data in scores:
                 s_dict[uid] = data['score']
 
+            logger.info("SETTING WEIGHTS")
             set_weights(s_dict, self.netuid, self.client, self.key)
 
     def validation_loop(self, config: Config | None = None) -> None:
