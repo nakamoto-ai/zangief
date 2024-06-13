@@ -298,11 +298,13 @@ class TranslateValidator(Module):
             if str(m['uid']) in scored_miners:
                 if m['key'] != scored_miners[str(m['uid'])]['ss58']:
                     current_weights = read_weight_file(self.weights_file)
-                    del current_weights[str(m['uid'])]
-                    write_weight_file(self.weights_file, current_weights)
+                    if str(m['uid']) in current_weights:
+                        del current_weights[str(m['uid'])]
+                        write_weight_file(self.weights_file, current_weights)
 
                 if m['key'] == scored_miners[str(m['uid'])]['ss58']:
-                    del remaining_miners[str(m['uid'])]
+                    if str(m['uid']) in remaining_miners:
+                        del remaining_miners[str(m['uid'])]
                     continue
 
             miners_to_query.append(m)
