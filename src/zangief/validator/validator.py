@@ -398,7 +398,7 @@ class TranslateValidator(Module):
         current_weights = read_weight_file(self.weights_file)
 
         score_dict: dict[int, float] = {}
-        for uid, score in zip(miners_to_query.keys(), scores):
+        for uid, score in zip([m['uid'] for m in miners_to_query], scores):
             score_dict[uid] = score
 
         data_to_write = {}
