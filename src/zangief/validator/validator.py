@@ -266,7 +266,7 @@ class TranslateValidator(Module):
         client = ModuleClient(module_ip, int(module_port), self.key)
 
         try:
-            if module_ip is None and module_port is None:
+            if module_ip == "None" or module_port == "None":
                 return ""
 
             miner_answer = asyncio.run(
@@ -295,8 +295,9 @@ class TranslateValidator(Module):
         for i, m in enumerate(miners):
             if m['uid'] in scored_miners:
                 if m['key'] != scored_miners[m['uid']]['ss58']:
-                    # TODO: Remove from weights.json
-                    pass
+                    current_weights = read_weight_file(self.weights_file)
+                    current_weights.pop(m['uid'])
+                    write_weight_file(self.weights_file, current_weights)
 
                 if m['key'] == scored_miners[m['uid']]['ss58']:
                     remaining_miners.pop(i)
@@ -394,7 +395,10 @@ class TranslateValidator(Module):
         logger.debug("Raw scores")
         logger.debug(scores)
 
-        for uid, score in zip(modules_info.keys(), scores):
+        current_weights = read_weight_file(self.weights_file)
+
+        score_dict: dict[int, float] = {}
+        for uid, score in zip(miners_to_query.keys(), scores):
             score_dict[uid] = score
 
         data_to_write = {}
@@ -417,7 +421,14 @@ class TranslateValidator(Module):
             logger.info("No miner returned a valid answer")
             return None
 
-        set_weights(score_dict, self.netuid, self.client, self.key)
+        if len(remaining_miners) == 0:
+            scores = read_weight_file(self.weights_file)
+
+            s_dict: dict[int, float] = {}
+            for uid, data in scores:
+                s_dict[uid] = data['score']
+
+            set_weights(s_dict, self.netuid, self.client, self.key)
 
     def validation_loop(self, config: Config | None = None) -> None:
         while True:
