@@ -123,7 +123,7 @@ def get_ip_port(modules_adresses: dict[int, str]):
 
     filtered_addr = {id: extract_address(addr) for id, addr in modules_adresses.items()}
     ip_port = {
-        id: x.group(0).split(":") for id, x in filtered_addr.items() if x is not None
+        id: x.group(0).split(":") for id, x in filtered_addr.items()
     }
     return ip_port
 
