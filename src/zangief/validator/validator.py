@@ -18,7 +18,7 @@ from communex.module.module import Module
 from communex.types import Ss58Address
 from communex.misc import get_map_modules
 from substrateinterface import Keypair
-from weights_io import ensure_weights_file
+from weights_io import ensure_weights_file, write_weight_file
 
 from config import Config
 from loguru import logger
@@ -295,6 +295,7 @@ class TranslateValidator(Module):
             logger.error(f"Error syncing with the network: {e}")
             self.client = CommuneClient(get_node_url())
             modules_addresses = self.get_addresses(self.client, netuid)
+        miners = get_miner_ip_port(self.client, self.netuid)
 
         modules_keys = self.client.query_map_key(netuid)
         val_ss58 = self.key.ss58_address
@@ -343,6 +344,15 @@ class TranslateValidator(Module):
 
         for uid, score in zip(modules_info.keys(), scores):
             score_dict[uid] = score
+
+        data_to_write = {}
+        for item in miners:
+            ss58 = item['key']
+            uid = item['uid']
+            score = score_dict[uid]
+            data_to_write[uid] = {"ss58": ss58, "score": score}
+
+        write_weight_file(self.weights_file, data_to_write)
 
         logger.info("Miner UIDs")
         logger.info(miner_uids)
