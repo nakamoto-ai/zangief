@@ -403,7 +403,7 @@ class TranslateValidator(Module):
 
         data_to_write = {}
         logger.info(f"SCORE DICT: {score_dict}")
-        for item in miners:
+        for item in miners_to_query:
             ss58 = item['key']
             uid = int(item['uid'])
             score = score_dict[uid]
