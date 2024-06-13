@@ -9,6 +9,7 @@ import random
 import argparse
 from typing import cast, Any
 from datetime import datetime
+import copy
 
 from communex.client import CommuneClient
 from communex.module.client import ModuleClient
@@ -221,6 +222,23 @@ class TranslateValidator(Module):
         """
         module_addresses = client.query_map_address(netuid)
         return module_addresses
+    
+    def split_ip_port(self, ip_port):
+        # Check if the input is empty or None
+        if not ip_port:
+            return None, None
+        
+        # Split the input string by the colon
+        parts = ip_port.split(":")
+        
+        # Check if the split resulted in exactly two parts
+        if len(parts) == 2:
+            ip, port = parts
+            logger.info(f"IP: {ip}")
+            logger.info(f"PORT: {port}")
+            return ip, port
+        else:
+            return None, None
 
     def _get_miner_prediction(
         self,
@@ -238,11 +256,17 @@ class TranslateValidator(Module):
             The generated answer from the miner module, or None if the miner fails to generate an answer.
         """
         question, source_language, target_language = prompt
-        connection, miner_key = miner_info
-        module_ip, module_port = connection
+        connection = miner_info['address']
+        miner_key = miner_info['key']
+        # connection, miner_key = miner_info
+        module_ip, module_port = self.split_ip_port(connection)
+
         client = ModuleClient(module_ip, int(module_port), self.key)
 
         try:
+            if module_ip is None and module_port is None:
+                return ""
+
             miner_answer = asyncio.run(
                 client.call(
                     "generate",
@@ -257,8 +281,32 @@ class TranslateValidator(Module):
             miner_answer = None
         return miner_answer
 
-    def get_miners_to_query(self, miner_keys):
-        return miner_keys
+    # def get_miners_to_query(self, miner_keys):
+    #     return miner_keys
+
+    def get_miners_to_query(self, miners: list[dict[str, Any]]):
+        scored_miners = read_weight_file(self.weights_file)
+        remaining_miners = copy.deepcopy(miners)
+        miners_to_query = []
+        counter = 0
+
+        for i, m in enumerate(miners):
+            if m['uid'] in scored_miners:
+                if m['key'] != scored_miners[m['uid']]['ss58']:
+                    # TODO: Remove from weights.json
+                    pass
+
+                if m['key'] == scored_miners[m['uid']]['ss58']:
+                    remaining_miners.pop(i)
+                    continue
+
+            miners_to_query.append(m)
+            counter += 1
+
+            if counter == 8:
+                break 
+
+        return remaining_miners, miners_to_query
 
     def get_miner_prompt(self) -> tuple:
         """
@@ -290,12 +338,12 @@ class TranslateValidator(Module):
         Args:
             netuid: The network UID of the subnet.
         """
-        try:
-            modules_addresses = self.get_addresses(self.client, netuid)
-        except Exception as e:
-            logger.error(f"Error syncing with the network: {e}")
-            self.client = CommuneClient(get_node_url())
-            modules_addresses = self.get_addresses(self.client, netuid)
+        # try:
+        #     modules_addresses = self.get_addresses(self.client, netuid)
+        # except Exception as e:
+        #     logger.error(f"Error syncing with the network: {e}")
+        #     self.client = CommuneClient(get_node_url())
+        #     modules_addresses = self.get_addresses(self.client, netuid)
         miners = get_miner_ip_port(self.client, self.netuid)
 
         modules_keys = self.client.query_map_key(netuid)
@@ -304,19 +352,20 @@ class TranslateValidator(Module):
             logger.error(f"Validator key {val_ss58} is not registered in subnet")
             return None
 
-        miners_to_query = self.get_miners_to_query(modules_keys.keys())
+        # miners_to_query = self.get_miners_to_query(modules_keys.keys())
+        remaining_miners, miners_to_query = self.get_miners_to_query(miners)
 
-        modules_info: dict[int, tuple[list[str], Ss58Address]] = {}
-        miner_uids = []
-        modules_filtered_address = get_ip_port(modules_addresses)
-        for module_id in miners_to_query:
-            module_addr = modules_filtered_address.get(module_id, None)
-            if not module_addr:
-                continue
-            modules_info[module_id] = (module_addr, modules_keys[module_id])
-            miner_uids.append(module_id)
+        # modules_info: dict[int, tuple[list[str], Ss58Address]] = {}
+        # miner_uids = []
+        # modules_filtered_address = get_ip_port(modules_addresses)
+        # for module_id in miners_to_query:
+        #     module_addr = modules_filtered_address.get(module_id, None)
+        #     if not module_addr:
+        #         continue
+        #     modules_info[module_id] = (module_addr, modules_keys[module_id])
+        #     miner_uids.append(module_id)
 
-        score_dict: dict[int, float] = {}
+        # score_dict: dict[int, float] = {}
 
         miner_prompt, source_language, target_language = self.get_miner_prompt()
 
@@ -331,7 +380,7 @@ class TranslateValidator(Module):
         get_miner_prediction = partial(self._get_miner_prediction, prompt)
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-            it = executor.map(get_miner_prediction, modules_info.values())
+            it = executor.map(get_miner_prediction, miners_to_query)
             miner_answers = [*it]
 
         scores = self.reward.get_scores(miner_prompt, target_language, miner_answers)
