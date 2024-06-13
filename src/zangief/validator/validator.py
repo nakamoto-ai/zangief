@@ -434,7 +434,7 @@ class TranslateValidator(Module):
             scores = read_weight_file(self.weights_file)
 
             s_dict: dict[int, float] = {}
-            for uid, data in scores:
+            for uid, data in scores.items():
                 s_dict[uid] = data['score']
 
             logger.info("SETTING WEIGHTS")
