@@ -262,13 +262,13 @@ class TranslateValidator(Module):
         miner_key = miner_info['key']
         # connection, miner_key = miner_info
         module_ip, module_port = self.split_ip_port(connection)
+        
+        if module_ip == "None" or module_port == "None":
+            return ""
 
         client = ModuleClient(module_ip, int(module_port), self.key)
 
         try:
-            if module_ip == "None" or module_port == "None":
-                return ""
-
             miner_answer = asyncio.run(
                 client.call(
                     "generate",
