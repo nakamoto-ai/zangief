@@ -295,14 +295,14 @@ class TranslateValidator(Module):
         logger.info(f"SCORED_MINERSa: {scored_miners}")
 
         for i, m in enumerate(miners):
-            if m['uid'] in scored_miners:
-                if m['key'] != scored_miners[m['uid']]['ss58']:
+            if str(m['uid']) in scored_miners:
+                if m['key'] != scored_miners[str(m['uid'])]['ss58']:
                     current_weights = read_weight_file(self.weights_file)
-                    current_weights.pop(m['uid'])
+                    del current_weights[str(m['uid'])]
                     write_weight_file(self.weights_file, current_weights)
 
-                if m['key'] == scored_miners[m['uid']]['ss58']:
-                    remaining_miners.pop(i)
+                if m['key'] == scored_miners[str(m['uid'])]['ss58']:
+                    del remaining_miners[str(m['uid'])]
                     continue
 
             miners_to_query.append(m)
@@ -313,7 +313,7 @@ class TranslateValidator(Module):
 
         logger.info(f"SCORED_MINERSb: {scored_miners}")
         logger.info(f"MINERS_TO_QUERY: {miners_to_query}")
-        
+
         return remaining_miners, miners_to_query
 
     def get_miner_prompt(self) -> tuple:
