@@ -402,8 +402,6 @@ class TranslateValidator(Module):
         logger.debug("Raw scores")
         logger.debug(scores)
 
-        current_weights = read_weight_file(self.weights_file)
-
         score_dict: dict[int, float] = {}
         for uid, score in zip([m['uid'] for m in miners_to_query], scores):
             score_dict[uid] = score
@@ -416,7 +414,11 @@ class TranslateValidator(Module):
             score = score_dict[uid]
             data_to_write[uid] = {"ss58": ss58, "score": score}
 
-        write_weight_file(self.weights_file, data_to_write)
+        current_weights = read_weight_file(self.weights_file)
+        for key, data in data_to_write.items():
+            current_weights[key] = data
+
+        write_weight_file(self.weights_file, current_weights)
         ddd = read_weight_file(self.weights_file)
         logger.info(f"READ DATA: {ddd}")
 
