@@ -1,4 +1,5 @@
 from loguru import logger
+from typing import Any
 import os 
 import json
 
@@ -13,7 +14,7 @@ def ensure_weights_file(zangief_dir_name, weights_file_name):
         logger.info(f"Created file: {weights_file_name}")
 
 
-def write_weight_file(weights_file, modules_info: dict[int, dict[str, float]]):
+def write_weight_file(weights_file, modules_info: dict[int, dict[str, Any]]):
     """
     Writes the modules and their scores to the weights.json file. Each module
     entry will contain the UID, SS58 address, and score.
