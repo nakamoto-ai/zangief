@@ -7,6 +7,7 @@ from functools import partial
 import numpy as np
 import random
 import argparse
+from typing import cast, Any
 from datetime import datetime
 
 from communex.client import CommuneClient
@@ -15,6 +16,7 @@ from communex._common import get_node_url
 from communex.compat.key import classic_load_key
 from communex.module.module import Module
 from communex.types import Ss58Address
+from communex.misc import get_map_modules
 from substrateinterface import Keypair
 from weights_io import ensure_weights_file
 
@@ -91,6 +93,22 @@ def extract_address(string: str):
     """
     return re.search(IP_REGEX, string)
 
+def get_miner_ip_port(client: CommuneClient, netuid: int, balances=False):
+    modules = cast(dict[str, Any], get_map_modules(
+    client, netuid=netuid, include_balances=balances))
+
+    # Convert the values to a human readable format
+    modules_to_list = [value for _, value in modules.items()]
+
+    miners: list[Any] = []
+
+    for module in modules_to_list:
+        if module["incentive"] == module["dividends"] == 0:
+            miners.append(module)
+        elif module["incentive"] > module["dividends"]:
+            miners.append(module)
+
+    return miners 
 
 def get_ip_port(modules_adresses: dict[int, str]):
     """
