@@ -402,10 +402,11 @@ class TranslateValidator(Module):
             score_dict[uid] = score
 
         data_to_write = {}
+        logger.info(f"SCORE DICT: {score_dict}")
         for item in miners:
             ss58 = item['key']
             uid = int(item['uid'])
-            score = score_dict[uid]
+            score = score_dict[uid-1]
             data_to_write[uid] = {"ss58": ss58, "score": score}
 
         write_weight_file(self.weights_file, data_to_write)
