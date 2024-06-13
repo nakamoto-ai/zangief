@@ -439,7 +439,7 @@ class TranslateValidator(Module):
 
             logger.info("SETTING WEIGHTS")
             set_weights(s_dict, self.netuid, self.client, self.key)
-            empty_dict: dict[int, dict[str, Any]]
+            empty_dict: dict[int, dict[str, Any]] = {}
             write_weight_file(self.weights_file, empty_dict)
 
     def validation_loop(self, config: Config | None = None) -> None:
