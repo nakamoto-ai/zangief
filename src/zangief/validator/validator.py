@@ -16,6 +16,7 @@ from communex.compat.key import classic_load_key
 from communex.module.module import Module
 from communex.types import Ss58Address
 from substrateinterface import Keypair
+from weights_io import ensure_weights_file
 
 from config import Config
 from loguru import logger
@@ -147,6 +148,11 @@ class TranslateValidator(Module):
         self.key = key
         self.netuid = netuid
         self.call_timeout = call_timeout
+        home_dir = os.path.expanduser("~")
+        commune_dir = os.path.join(home_dir, ".commune")
+        self.zangief_dir = os.path.join(commune_dir, "zangief")
+        self.weights_file = os.path.join(self.zangief_dir, "weights.json")
+        ensure_weights_file(zangief_dir_name=self.zangief_dir, weights_file_name=self.weights_file)
 
         self.reward = Reward()
         self.languages = [
