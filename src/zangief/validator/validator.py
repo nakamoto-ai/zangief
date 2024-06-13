@@ -414,7 +414,7 @@ class TranslateValidator(Module):
         logger.info(f"READ DATA: {ddd}")
 
         logger.info("Miner UIDs")
-        logger.info(miner_uids)
+        logger.info([m['uid'] for m in miners_to_query])
         logger.info("Final scores")
         logger.info(scores)
 
