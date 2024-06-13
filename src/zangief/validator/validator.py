@@ -426,9 +426,9 @@ class TranslateValidator(Module):
         logger.info("Final scores")
         logger.info(scores)
 
-        if not score_dict:
-            logger.info("No miner returned a valid answer")
-            return None
+        # if not score_dict:
+        #     logger.info("No miner returned a valid answer")
+        #     return None
 
         if len(remaining_miners) == 0:
             scores = read_weight_file(self.weights_file)
