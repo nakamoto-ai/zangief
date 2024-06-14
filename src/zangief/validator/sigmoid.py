@@ -6,13 +6,19 @@ from typing import Dict
 def sigmoid(x: float):
     return 1 / (1 + math.exp(-x))
 
-def sigmoid_rewards(score_dict: dict[int, float]) -> dict[int, float]:
+import math
+from typing import Dict
+
+def sigmoid(x: float) -> float:
+    return 1 / (1 + math.exp(-x))
+
+def sigmoid_rewards(score_dict: Dict[int, float]) -> Dict[int, float]:
     """
     Adjusts the distribution of scores, such that the worst miners are punished significantly more than the rest.
     This ensures that it's unprofitable to run a low-end model, in comparison to high-end models.
 
     Args:
-        score_dict (dict[int, float]): A dictionary mapping miner UIDs to their scores.
+        score_dict (Dict[int, float]): A dictionary mapping miner UIDs to their scores.
 
     Returns:
         A dictionary mapping miner UIDs to their adjusted scores.
@@ -20,28 +26,21 @@ def sigmoid_rewards(score_dict: dict[int, float]) -> dict[int, float]:
     # Calculate the mean score
     mean_score = sum(score_dict.values()) / len(score_dict)
 
-    # Set the threshold as a percentage above the mean score
-    threshold_percentage = 0.2  
-    threshold = mean_score * (1 - threshold_percentage)
+    # Calculate standard deviation
+    std_dev = (sum((x - mean_score) ** 2 for x in score_dict.values()) / len(score_dict)) ** 0.5
 
-    steepness = 7.5  # steepness for sharper punishment
-
-    # Set the high and low rewards
-    high_reward = 1.0
-    low_reward = 0.01  
+    # Set the steepness for the sigmoid function
+    steepness = 10.0 / std_dev if std_dev > 0 else 10.0  # Avoid division by zero
 
     # Calculate the adjusted scores using the sigmoid function
     adjusted_scores: Dict[int, float] = {}
     for model_id, score in score_dict.items():
-        if score < threshold:
-            normalized_score = (threshold - score) * steepness
-            penalty_ratio = sigmoid(normalized_score)
-            adjusted_score = low_reward + (high_reward - low_reward) * penalty_ratio
-        else:
-            adjusted_score = high_reward
+        normalized_score = (score - mean_score) * steepness
+        adjusted_score = sigmoid(normalized_score)
         adjusted_scores[model_id] = adjusted_score
 
     return adjusted_scores
+
 
 # def sigmoid_rewards(score_dict: dict[int, float]) -> dict[int, float]:
 #     mean_score = sum(score_dict.values()) / len(score_dict)
