@@ -1,5 +1,6 @@
 
 import math
+from typing import Dict
 
 
 def sigmoid(x: float):
@@ -7,8 +8,8 @@ def sigmoid(x: float):
 
 def sigmoid_rewards(score_dict: dict[int, float]) -> dict[int, float]:
     """
-    Adjusts the distribution of scores, such that the best miners are rewarded significantly more than the rest.
-    This ensures that it's profitable to run a high-end model, in comparison to cheap models.
+    Adjusts the distribution of scores, such that the worst miners are punished significantly more than the rest.
+    This ensures that it's unprofitable to run a low-end model, in comparison to high-end models.
 
     Args:
         score_dict (dict[int, float]): A dictionary mapping miner UIDs to their scores.
@@ -21,9 +22,8 @@ def sigmoid_rewards(score_dict: dict[int, float]) -> dict[int, float]:
 
     # Set the threshold as a percentage above the mean score
     threshold_percentage = 0.2  
-    threshold = mean_score * (1 + threshold_percentage)
+    threshold = mean_score * (1 - threshold_percentage)
 
-   
     steepness = 5.0  # steepness for sharper punishment
 
     # Set the high and low rewards
@@ -31,11 +31,14 @@ def sigmoid_rewards(score_dict: dict[int, float]) -> dict[int, float]:
     low_reward = 0.01  
 
     # Calculate the adjusted scores using the sigmoid function
-    adjusted_scores : dict[int, float] = {}
+    adjusted_scores: Dict[int, float] = {}
     for model_id, score in score_dict.items():
-        normalized_score = (score - threshold) * steepness
-        reward_ratio = sigmoid(normalized_score)
-        adjusted_score = low_reward + (high_reward - low_reward) * reward_ratio
+        if score < threshold:
+            normalized_score = (threshold - score) * steepness
+            penalty_ratio = sigmoid(normalized_score)
+            adjusted_score = low_reward + (high_reward - low_reward) * penalty_ratio
+        else:
+            adjusted_score = high_reward
         adjusted_scores[model_id] = adjusted_score
 
     return adjusted_scores
