@@ -424,7 +424,7 @@ class TranslateValidator(Module):
         Set weights for miners based on their normalized, scaled and sigmoided scores.
         """
         full_score_dict = s_dict
-        weighted_scores: dict[int, int] = {}
+        weighted_scores: dict[int, float] = {}
 
         abnormal_scores = full_score_dict.values()
         normal_scores = normalize_scores(abnormal_scores)
