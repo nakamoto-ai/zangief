@@ -436,7 +436,7 @@ class TranslateValidator(Module):
         weighted_scores: dict[int: float] = {}
 
         abnormal_scores = full_score_dict.values()
-        normal_scores = normalize_scores(abnormal_scores, scale=False)
+        normal_scores = normalize_scores(abnormal_scores)
         # normal_scores = abnormal_scores
         score_dict = {uid: score for uid, score in zip(full_score_dict.keys(), normal_scores)}
         sigmoided_scores = sigmoid_rewards(score_dict)
@@ -446,10 +446,7 @@ class TranslateValidator(Module):
             weight = score * 1000 / scores
             weighted_scores[uid] = weight
 
-        weighted_scores = {k: v for k, v in weighted_scores.items() if v != 0}
-        new_weighted_scores = normalize_scores(weighted_scores.values(), scale=True)
-        weighted_scores = {k: v for k, v in zip(weighted_scores.keys(), new_weighted_scores)}
-
+        weighted_scores = {k: v for k, v in zip(weighted_scores.keys(), normalize_scores(weighted_scores.values())) if v != 0}
 
         if self.uid is not None and self.uid in weighted_scores:
             del weighted_scores[self.uid]
