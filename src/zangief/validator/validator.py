@@ -406,7 +406,7 @@ class TranslateValidator(Module):
 
             logger.info("SETTING WEIGHTS")
             logger.info(f"WEIGHTS TO SET: {s_dict}")
-            set_weights(s_dict, self.netuid, self.client, self.key)
+            self.set_weights(s_dict)
             write_weight_file(self.weights_file, {})
 
     def validation_loop(self, config: Config | None = None) -> None:
@@ -418,11 +418,11 @@ class TranslateValidator(Module):
             logger.info(f"Sleeping for {interval} seconds ... ")
             time.sleep(interval)
 
-    def set_weights(self):
+    def set_weights(self, s_dict):
         """
         Set weights for miners based on their normalized, scaled and sigmoided scores.
         """
-        full_score_dict = read_weight_file(self.weights_file)
+        full_score_dict = s_dict
         weighted_scores: dict[int, int] = {}
 
         abnormal_scores = [score for uid, (score, address) in full_score_dict]
