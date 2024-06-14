@@ -407,7 +407,6 @@ class TranslateValidator(Module):
                 s_dict[uid] = data['score']
 
             logger.info("SETTING WEIGHTS")
-            logger.info(f"WEIGHTS TO SET: {s_dict}")
             self.set_weights(s_dict)
             write_weight_file(self.weights_file, {})
 
@@ -441,6 +440,8 @@ class TranslateValidator(Module):
 
         uids = list(weighted_scores.keys())
         weights = list(weighted_scores.values())
+
+        logger.info(f"WEIGHTS TO SET: {weighted_scores}")
 
         try:
             self.client.vote(key=self.key, uids=uids, weights=weights, netuid=self.netuid)
