@@ -173,6 +173,7 @@ class TranslateValidator(Module):
         self.zangief_dir = os.path.join(commune_dir, "zangief")
         self.weights_file = os.path.join(self.zangief_dir, "weights.json")
         ensure_weights_file(zangief_dir_name=self.zangief_dir, weights_file_name=self.weights_file)
+        write_weight_file(self.weights_file, {})
 
         self.reward = Reward()
         self.languages = [
@@ -287,6 +288,8 @@ class TranslateValidator(Module):
     #     return miner_keys
 
     def get_miners_to_query(self, miners: list[dict[str, Any]]):
+        # TODO: Clean this up to be more manageable 
+
         scored_miners = read_weight_file(self.weights_file)
         remaining_miners = copy.deepcopy(miners)
         miners_to_query = []
@@ -435,12 +438,13 @@ class TranslateValidator(Module):
 
             s_dict: dict[int, float] = {}
             for uid, data in scores.items():
+                # s_dict[int(uid)] = data['score']
                 s_dict[uid] = data['score']
 
             logger.info("SETTING WEIGHTS")
+            logger.info(f"WEIGHTS TO SET: {s_dict}")
             set_weights(s_dict, self.netuid, self.client, self.key)
-            empty_dict: dict[int, dict[str, Any]] = {}
-            write_weight_file(self.weights_file, empty_dict)
+            write_weight_file(self.weights_file, {})
 
     def validation_loop(self, config: Config | None = None) -> None:
         while True:
