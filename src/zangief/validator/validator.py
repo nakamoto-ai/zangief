@@ -446,9 +446,9 @@ class TranslateValidator(Module):
 
         weighted_scores = {k: v for k, v in weighted_scores.items() if v != 0}
 
-        if self.uid is not None:
+        if self.uid is not None and self.uid in weighted_scores:
             del weighted_scores[self.uid]
-            
+
         uids = list(weighted_scores.keys())
         weights = list(weighted_scores.values())
 
