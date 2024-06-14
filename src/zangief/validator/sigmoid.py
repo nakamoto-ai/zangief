@@ -31,7 +31,7 @@ def sigmoid_rewards(score_dict: Dict[int, float]) -> Dict[int, float]:
     threshold = mean_score * (1 + threshold_percentage)
 
    
-    steepness = 5.0  # steepness for sharper punishment
+    steepness = 1.0  # steepness for sharper punishment
 
     # Set the high and low rewards
     high_reward = 1.0
