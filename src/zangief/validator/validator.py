@@ -433,7 +433,7 @@ class TranslateValidator(Module):
         scores = sum(sigmoided_scores.values())
 
         for uid, score in sigmoided_scores.items():
-            weight = int(score * 1000 / scores)
+            weight = score * 1000 / scores
             weighted_scores[uid] = weight
 
         weighted_scores = {k: v for k, v in weighted_scores.items() if v != 0}
