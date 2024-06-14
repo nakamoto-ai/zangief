@@ -448,8 +448,8 @@ class TranslateValidator(Module):
 
         weighted_scores = {k: v for k, v in zip(weighted_scores.keys(), normalize_scores(weighted_scores.values())) if v != 0}
 
-        if self.uid is not None and self.uid in weighted_scores:
-            del weighted_scores[self.uid]
+        if self.uid is not None and str(self.uid) in weighted_scores:
+            del weighted_scores[str(self.uid)]
             logger.info(f"REMOVING UID !!!!!! {self.uid}")
         else:
             logger.info("NOT REMOVING ANY UID")
