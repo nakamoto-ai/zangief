@@ -12,7 +12,7 @@ def sigmoid_rewards(score_dict: dict[int, float]) -> dict[int, float]:
     threshold_percentage = 0.2
     threshold = mean_score * (1 + threshold_percentage)
 
-    steepness = 6.0
+    steepness = 5.0
 
     high_reward = 1.0
     low_reward = 0.01
