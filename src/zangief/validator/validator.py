@@ -410,7 +410,7 @@ class TranslateValidator(Module):
         if len(remaining_miners) == 0:
             scores = read_weight_file(self.weights_file)
 
-            s_dict: dict[int, float] = {}
+            s_dict: dict[int: float] = {}
             for uid, data in scores.items():
                 # s_dict[int(uid)] = data['score']
                 s_dict[uid] = data['score']
@@ -433,7 +433,7 @@ class TranslateValidator(Module):
         Set weights for miners based on their normalized, scaled and sigmoided scores.
         """
         full_score_dict = s_dict
-        weighted_scores: dict[int, float] = {}
+        weighted_scores: dict[int: float] = {}
 
         abnormal_scores = full_score_dict.values()
         normal_scores = normalize_scores(abnormal_scores, scale=False)
