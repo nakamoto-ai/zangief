@@ -333,7 +333,7 @@ class TranslateValidator(Module):
             return None
         
         for uid, ss58 in modules_keys.items():
-            if ss58 == val_ss58:
+            if ss58.__str__() == val_ss58:
                 self.uid = uid
                 logger.info(f"UID IS !!!!!!! {self.uid}")
 
