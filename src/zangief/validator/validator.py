@@ -135,6 +135,7 @@ class TranslateValidator(Module):
         self.netuid = netuid
         self.call_timeout = call_timeout
         self.use_testnet = use_testnet
+        self.uid = None
         home_dir = os.path.expanduser("~")
         commune_dir = os.path.join(home_dir, ".commune")
         self.zangief_dir = os.path.join(commune_dir, "zangief")
@@ -321,6 +322,8 @@ class TranslateValidator(Module):
         #     logger.error(f"Error syncing with the network: {e}")
         #     self.client = CommuneClient(get_node_url())
         #     modules_addresses = self.get_addresses(self.client, netuid)
+        self.uid = None 
+
         miners = get_miner_ip_port(self.client, self.netuid)
 
         modules_keys = self.client.query_map_key(netuid)
@@ -328,6 +331,10 @@ class TranslateValidator(Module):
         if val_ss58 not in modules_keys.values():
             logger.error(f"Validator key {val_ss58} is not registered in subnet")
             return None
+        
+        for uid, ss58 in modules_keys.items():
+            if ss58 == val_ss58:
+                self.uid = uid
 
         # miners_to_query = self.get_miners_to_query(modules_keys.keys())
         remaining_miners, miners_to_query = self.get_miners_to_query(miners)
@@ -439,6 +446,9 @@ class TranslateValidator(Module):
 
         weighted_scores = {k: v for k, v in weighted_scores.items() if v != 0}
 
+        if self.uid is not None:
+            del weighted_scores[self.uid]
+            
         uids = list(weighted_scores.keys())
         weights = list(weighted_scores.values())
 
