@@ -127,12 +127,14 @@ class TranslateValidator(Module):
         netuid: int,
         client: CommuneClient,
         call_timeout: int = 20,
+        use_testnet: bool = False,
     ) -> None:
         super().__init__()
         self.client = client
         self.key = key
         self.netuid = netuid
         self.call_timeout = call_timeout
+        self.use_testnet = use_testnet
         home_dir = os.path.expanduser("~")
         commune_dir = os.path.join(home_dir, ".commune")
         self.zangief_dir = os.path.join(commune_dir, "zangief")
@@ -447,8 +449,8 @@ class TranslateValidator(Module):
             sleepy_time = random.uniform(1, 2)
             time.sleep(sleepy_time)
             # retry with a different node
-            client = CommuneClient(get_node_url())
-            client.vote(key=self.key, uids=uids, weights=weights, netuid=self.netuid)
+            self.client = CommuneClient(get_node_url(use_testnet=self.use_testnet))
+            self.client.vote(key=self.key, uids=uids, weights=weights, netuid=self.netuid)
 
 
 if __name__ == '__main__':
@@ -478,6 +480,7 @@ if __name__ == '__main__':
         subnet_uid,
         c_client,
         call_timeout=20,
+        use_testnet=use_testnet
     )
     logger.info("Running validator ... ")
     validator.validation_loop(config)
