@@ -448,7 +448,7 @@ class TranslateValidator(Module):
             time.sleep(sleepy_time)
             # retry with a different node
             client = CommuneClient(get_node_url())
-            client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
+            client.vote(key=self.key, uids=uids, weights=weights, netuid=self.netuid)
 
 
 if __name__ == '__main__':
