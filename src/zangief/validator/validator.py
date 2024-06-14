@@ -427,7 +427,8 @@ class TranslateValidator(Module):
         weighted_scores: dict[int, float] = {}
 
         abnormal_scores = full_score_dict.values()
-        normal_scores = normalize_scores(abnormal_scores)
+        # normal_scores = normalize_scores(abnormal_scores)
+        normal_scores = abnormal_scores
         score_dict = {uid: score for uid, score in zip(full_score_dict.keys(), normal_scores)}
         sigmoided_scores = sigmoid_rewards(score_dict)
         scores = sum(sigmoided_scores.values())
