@@ -86,7 +86,7 @@ def get_netuid(is_testnet):
         return 1
 
 
-def normalize_scores(scores, scale=False):
+def normalize_scores(scores):
     min_score = min(scores)
     max_score = max(scores)
 
@@ -97,9 +97,6 @@ def normalize_scores(scores, scale=False):
     # Normalize scores from 0 to 1
     normalized_scores = [(score - min_score) / (max_score - min_score) for score in scores]
 
-    # Scale normalized scores from min_score to 1
-    if scale:
-        normalized_scores = [score * (1 - min_score) + min_score for score in normalized_scores]
     return normalized_scores
 
 
