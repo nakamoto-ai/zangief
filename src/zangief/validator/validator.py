@@ -406,7 +406,7 @@ class TranslateValidator(Module):
 
             logger.info("SETTING WEIGHTS")
             logger.info(f"WEIGHTS TO SET: {s_dict}")
-            set_weights(s_dict)
+            self.set_weights(s_dict)
             write_weight_file(self.weights_file, {})
 
     def validation_loop(self, config: Config | None = None) -> None:
