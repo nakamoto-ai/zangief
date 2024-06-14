@@ -406,7 +406,7 @@ class TranslateValidator(Module):
 
             logger.info("SETTING WEIGHTS")
             logger.info(f"WEIGHTS TO SET: {s_dict}")
-            self.set_weights(s_dict)
+            set_weights(s_dict)
             write_weight_file(self.weights_file, {})
 
     def validation_loop(self, config: Config | None = None) -> None:
@@ -425,7 +425,7 @@ class TranslateValidator(Module):
         full_score_dict = s_dict
         weighted_scores: dict[int, int] = {}
 
-        abnormal_scores = [score for uid, (score, address) in full_score_dict]
+        abnormal_scores = full_score_dict.values()
         normal_scores = normalize_scores(abnormal_scores)
         score_dict = {uid: score for uid, score in zip(full_score_dict.keys(), normal_scores)}
         sigmoided_scores = sigmoid_rewards(score_dict)
