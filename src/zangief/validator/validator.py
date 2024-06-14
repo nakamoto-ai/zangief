@@ -322,7 +322,7 @@ class TranslateValidator(Module):
         #     logger.error(f"Error syncing with the network: {e}")
         #     self.client = CommuneClient(get_node_url())
         #     modules_addresses = self.get_addresses(self.client, netuid)
-        self.uid = None 
+        # self.uid = None 
 
         miners = get_miner_ip_port(self.client, self.netuid)
 
@@ -335,6 +335,7 @@ class TranslateValidator(Module):
         for uid, ss58 in modules_keys.items():
             if ss58 == val_ss58:
                 self.uid = uid
+                logger.info(f"UID IS !!!!!!! {self.uid}")
 
         # miners_to_query = self.get_miners_to_query(modules_keys.keys())
         remaining_miners, miners_to_query = self.get_miners_to_query(miners)
@@ -448,6 +449,9 @@ class TranslateValidator(Module):
 
         if self.uid is not None and self.uid in weighted_scores:
             del weighted_scores[self.uid]
+            logger.info(f"REMOVING UID !!!!!! {self.uid}")
+        else:
+            logger.info("NOT REMOVING ANY UID")
 
         uids = list(weighted_scores.keys())
         weights = list(weighted_scores.values())
