@@ -20,6 +20,7 @@ from communex.types import Ss58Address
 from communex.misc import get_map_modules
 from substrateinterface import Keypair
 from weights_io import ensure_weights_file, write_weight_file, read_weight_file
+from sigmoid import sigmoid_rewards
 
 from config import Config
 from loguru import logger
@@ -34,65 +35,12 @@ logger.add("logs/log_{time:YYYY-MM-DD}.log", rotation="1 day", level="INFO")
 IP_REGEX = re.compile(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+")
 
 
-def set_weights(
-    score_dict: dict[
-        int, float
-    ],  # implemented as a float score from 0 to 1, one being the best
-    # you can implement your custom logic for scoring
-    netuid: int,
-    client: CommuneClient,
-    key: Keypair,
-) -> None:
-    """
-    Set weights for miners based on their scores.
-
-    Args:
-        score_dict: A dictionary mapping miner UIDs to their scores.
-        netuid: The network UID.
-        client: The CommuneX client.
-        key: The keypair for signing transactions.
-    """
-
-    # Create a new dictionary to store the weighted scores
-    weighted_scores: dict[int, int] = {}
-
-    # Calculate the sum of all inverted scores
-    scores = sum(score_dict.values())
-    # process the scores into weights of type dict[int, int]
-    # Iterate over the items in the score_dict
-    for uid, score in score_dict.items():
-        # Calculate the normalized weight as an integer
-        if scores == 0:
-            weight = 0
-        else:
-            weight = int(score * 1000 / scores)
-
-        # Add the weighted score to the new dictionary
-        weighted_scores[uid] = weight
-
-
-    # filter out 0 weights
-    weighted_scores = {k: v for k, v in weighted_scores.items() if v != 0}
-
-    uids = list(weighted_scores.keys())
-    weights = list(weighted_scores.values())
-
-    try:
-        client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
-    except Exception as e:
-        logger.error(f"WARNING: Failed to set weights with exception: {e}. Will retry.")
-        sleepy_time = random.uniform(1, 2)
-        time.sleep(sleepy_time)
-        # retry with a different node
-        client = CommuneClient(get_node_url())
-        client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
-
-
 def extract_address(string: str):
     """
     Extracts an address from a string.
     """
     return re.search(IP_REGEX, string)
+
 
 def get_miner_ip_port(client: CommuneClient, netuid: int, balances=False):
     modules = cast(dict[str, Any], get_map_modules(
@@ -110,6 +58,7 @@ def get_miner_ip_port(client: CommuneClient, netuid: int, balances=False):
             miners.append(module)
 
     return miners 
+
 
 def get_ip_port(modules_adresses: dict[int, str]):
     """
@@ -135,6 +84,22 @@ def get_netuid(is_testnet):
         return 23
     else:
         return 1
+
+
+def normalize_scores(scores):
+    min_score = min(scores)
+    max_score = max(scores)
+
+    if min_score == max_score:
+        # If all scores are the same, give all ones
+        return [1] * len(scores)
+
+    # Normalize scores from 0 to 1
+    normalized_scores = [(score - min_score) / (max_score - min_score) for score in scores]
+
+    # Scale normalized scores from min_score to 1
+    scaled_scores = [score * (1 - min_score) + min_score for score in normalized_scores]
+    return scaled_scores
 
 
 class TranslateValidator(Module):
@@ -207,8 +172,6 @@ class TranslateValidator(Module):
             "vi": [cc_100],
             "zh": [cc_100],
         }
-
-
 
     def get_addresses(self, client: CommuneClient, netuid: int) -> dict[int, str]:
         """
@@ -454,6 +417,38 @@ class TranslateValidator(Module):
             interval = int(config.validator.get("interval"))
             logger.info(f"Sleeping for {interval} seconds ... ")
             time.sleep(interval)
+
+    def set_weights(self):
+        """
+        Set weights for miners based on their normalized, scaled and sigmoided scores.
+        """
+        full_score_dict = read_weight_file(self.weights_file)
+        weighted_scores: dict[int, int] = {}
+
+        abnormal_scores = [score for uid, (score, address) in full_score_dict]
+        normal_scores = normalize_scores(abnormal_scores)
+        score_dict = {uid: score for uid, score in zip(full_score_dict.keys(), normal_scores)}
+        sigmoided_scores = sigmoid_rewards(score_dict)
+        scores = sum(sigmoided_scores.values())
+
+        for uid, score in sigmoided_scores.items():
+            weight = int(score * 1000 / scores)
+            weighted_scores[uid] = weight
+
+        weighted_scores = {k: v for k, v in weighted_scores.items() if v != 0}
+
+        uids = list(weighted_scores.keys())
+        weights = list(weighted_scores.values())
+
+        try:
+            self.client.vote(key=self.key, uids=uids, weights=weights, netuid=self.netuid)
+        except Exception as e:
+            logger.error(f"WARNING: Failed to set weights with exception: {e}. Will retry.")
+            sleepy_time = random.uniform(1, 2)
+            time.sleep(sleepy_time)
+            # retry with a different node
+            client = CommuneClient(get_node_url())
+            client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
 
 
 if __name__ == '__main__':
