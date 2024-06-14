@@ -98,8 +98,8 @@ def normalize_scores(scores):
     normalized_scores = [(score - min_score) / (max_score - min_score) for score in scores]
 
     # Scale normalized scores from min_score to 1
-    scaled_scores = [score * (1 - min_score) + min_score for score in normalized_scores]
-    return scaled_scores
+    # scaled_scores = [score * (1 - min_score) + min_score for score in normalized_scores]
+    return normalized_scores
 
 
 class TranslateValidator(Module):
@@ -427,8 +427,8 @@ class TranslateValidator(Module):
         weighted_scores: dict[int, float] = {}
 
         abnormal_scores = full_score_dict.values()
-        # normal_scores = normalize_scores(abnormal_scores)
-        normal_scores = abnormal_scores
+        normal_scores = normalize_scores(abnormal_scores)
+        # normal_scores = abnormal_scores
         score_dict = {uid: score for uid, score in zip(full_score_dict.keys(), normal_scores)}
         sigmoided_scores = sigmoid_rewards(score_dict)
         scores = sum(sigmoided_scores.values())
