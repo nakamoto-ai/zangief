@@ -20,7 +20,7 @@ from communex.types import Ss58Address
 from communex.misc import get_map_modules
 from substrateinterface import Keypair
 from weights_io import ensure_weights_file, write_weight_file, read_weight_file
-from sigmoid import sigmoid_rewards
+from power_scaling import conditional_power_scaling
 
 from config import Config
 from loguru import logger
@@ -225,7 +225,6 @@ class TranslateValidator(Module):
         question, source_language, target_language = prompt
         connection = miner_info['address']
         miner_key = miner_info['key']
-        # connection, miner_key = miner_info
         module_ip, module_port = self.split_ip_port(connection)
         
         if module_ip == "None" or module_port == "None":
@@ -248,38 +247,42 @@ class TranslateValidator(Module):
             miner_answer = None
         return miner_answer
 
-    # def get_miners_to_query(self, miner_keys):
-    #     return miner_keys
-
     def get_miners_to_query(self, miners: list[dict[str, Any]]):
-        # TODO: Clean this up to be more manageable 
-
-        scored_miners = read_weight_file(self.weights_file)
-        remaining_miners = copy.deepcopy(miners)
+        current_weights = read_weight_file(self.weights_file)
         miners_to_query = []
+        excluded_uids = set()
         counter = 0
+        weights_changed = False
 
-        logger.info(f"SCORED_MINERSa: {scored_miners}")
+        logger.info(f"Initial SCORED_MINERS: {current_weights}")
 
-        for i, m in enumerate(miners):
-            if str(m['uid']) in scored_miners:
-                if m['key'] != scored_miners[str(m['uid'])]['ss58']:
-                    current_weights = read_weight_file(self.weights_file)
-                    if str(m['uid']) in current_weights:
-                        del current_weights[str(m['uid'])]
-                        write_weight_file(self.weights_file, current_weights)
+        for miner in miners:
+            uid = str(miner['uid'])
+            miner_key = miner['key']
 
-                if m['key'] == scored_miners[str(m['uid'])]['ss58']:
-                    remaining_miners = [rm for rm in remaining_miners if rm['uid'] != m['uid']]
+            if uid in current_weights:
+                if miner_key != current_weights[uid]['ss58']:
+                    # Miner has been deregistered and must be re-scored
+                    del current_weights[uid]
+                    weights_changed = True
+
+                # If the miner key matches and UID is in scored_miners, exclude it because it has already been scored
+                if miner_key == current_weights[uid]['ss58']:
+                    excluded_uids.add(uid)
                     continue
 
-            miners_to_query.append(m)
+            miners_to_query.append(miner)
             counter += 1
 
             if counter == 8:
-                break 
+                break
 
-        logger.info(f"SCORED_MINERSb: {scored_miners}")
+        remaining_miners = [miner for miner in miners if str(miner['uid']) not in excluded_uids]
+
+        if weights_changed:
+            write_weight_file(self.weights_file, current_weights)
+
+        logger.info(f"Updated SCORED_MINERS: {current_weights}")
         logger.info(f"MINERS_TO_QUERY: {miners_to_query}")
 
         return remaining_miners, miners_to_query
@@ -314,13 +317,6 @@ class TranslateValidator(Module):
         Args:
             netuid: The network UID of the subnet.
         """
-        # try:
-        #     modules_addresses = self.get_addresses(self.client, netuid)
-        # except Exception as e:
-        #     logger.error(f"Error syncing with the network: {e}")
-        #     self.client = CommuneClient(get_node_url())
-        #     modules_addresses = self.get_addresses(self.client, netuid)
-        # self.uid = None 
 
         miners = get_miner_ip_port(self.client, self.netuid)
 
@@ -335,20 +331,7 @@ class TranslateValidator(Module):
                 self.uid = uid
                 logger.info(f"UID IS !!!!!!! {self.uid}")
 
-        # miners_to_query = self.get_miners_to_query(modules_keys.keys())
         remaining_miners, miners_to_query = self.get_miners_to_query(miners)
-
-        # modules_info: dict[int, tuple[list[str], Ss58Address]] = {}
-        # miner_uids = []
-        # modules_filtered_address = get_ip_port(modules_addresses)
-        # for module_id in miners_to_query:
-        #     module_addr = modules_filtered_address.get(module_id, None)
-        #     if not module_addr:
-        #         continue
-        #     modules_info[module_id] = (module_addr, modules_keys[module_id])
-        #     miner_uids.append(module_id)
-
-        # score_dict: dict[int, float] = {}
 
         miner_prompt, source_language, target_language = self.get_miner_prompt()
 
@@ -400,16 +383,11 @@ class TranslateValidator(Module):
         logger.info("Final scores")
         logger.info(scores)
 
-        # if not score_dict:
-        #     logger.info("No miner returned a valid answer")
-        #     return None
-
         if len(remaining_miners) == 0:
             scores = read_weight_file(self.weights_file)
 
             s_dict: dict[int: float] = {}
             for uid, data in scores.items():
-                # s_dict[int(uid)] = data['score']
                 s_dict[uid] = data['score']
 
             logger.info("SETTING WEIGHTS")
@@ -427,19 +405,18 @@ class TranslateValidator(Module):
 
     def set_weights(self, s_dict):
         """
-        Set weights for miners based on their normalized, scaled and sigmoided scores.
+        Set weights for miners based on their normalized and power scaled scores.
         """
         full_score_dict = s_dict
         weighted_scores: dict[int: float] = {}
 
         abnormal_scores = full_score_dict.values()
         normal_scores = normalize_scores(abnormal_scores)
-        # normal_scores = abnormal_scores
         score_dict = {uid: score for uid, score in zip(full_score_dict.keys(), normal_scores)}
-        sigmoided_scores = sigmoid_rewards(score_dict)
-        scores = sum(sigmoided_scores.values())
+        power_scaled_scores = conditional_power_scaling(score_dict)
+        scores = sum(power_scaled_scores.values())
 
-        for uid, score in sigmoided_scores.items():
+        for uid, score in power_scaled_scores.items():
             weight = score * 1000 / scores
             weighted_scores[uid] = weight
 
