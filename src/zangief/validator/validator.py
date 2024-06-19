@@ -428,7 +428,10 @@ class TranslateValidator(Module):
         uids = list(weighted_scores.keys())
         weights = list(weighted_scores.values())
 
+        logger.info("**********************************")
+        logger.info(f"UIDS: {uids}")
         logger.info(f"WEIGHTS TO SET: {weighted_scores}")
+        logger.info("**********************************")
 
         try:
             self.client.vote(key=self.key, uids=uids, weights=weights, netuid=self.netuid)
