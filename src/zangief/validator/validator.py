@@ -428,7 +428,7 @@ class TranslateValidator(Module):
         weights = list(weighted_scores.values())
 
         logger.info("**********************************")
-        logger.info(f"UIDS: {uids}")
+        logger.info(f"UIDS: {intuids}")
         logger.info(f"WEIGHTS TO SET: {weighted_scores}")
         logger.info("**********************************")
 
