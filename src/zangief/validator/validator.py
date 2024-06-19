@@ -426,21 +426,22 @@ class TranslateValidator(Module):
         uids = list(weighted_scores.keys())
         intuids = [eval(i) for i in uids]
         weights = list(weighted_scores.values())
+        intweights = [int(weight * 1000) for weight in weights]
 
         logger.info("**********************************")
         logger.info(f"UIDS: {intuids}")
-        logger.info(f"WEIGHTS TO SET: {weighted_scores}")
+        logger.info(f"WEIGHTS TO SET: {intweights}")
         logger.info("**********************************")
 
         try:
-            self.client.vote(key=self.key, uids=intuids, weights=weights, netuid=self.netuid)
+            self.client.vote(key=self.key, uids=intuids, weights=intweights, netuid=self.netuid)
         except Exception as e:
             logger.error(f"WARNING: Failed to set weights with exception: {e}. Will retry.")
             sleepy_time = random.uniform(1, 2)
             time.sleep(sleepy_time)
             # retry with a different node
             self.client = CommuneClient(get_node_url(use_testnet=self.use_testnet))
-            self.client.vote(key=self.key, uids=intuids, weights=weights, netuid=self.netuid)
+            self.client.vote(key=self.key, uids=intuids, weights=intweights, netuid=self.netuid)
 
 
 if __name__ == '__main__':
