@@ -195,8 +195,6 @@ class TranslateValidator(Module):
         
         # Split the input string by the colon
         parts = ip_port.split(":")
-
-        logger.info(f"PARTS: {parts}")
         
         # Check if the split resulted in exactly two parts
         if len(parts) == 2:
