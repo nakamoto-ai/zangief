@@ -265,7 +265,7 @@ class TranslateValidator(Module):
                     weights_changed = True
 
                 # If the miner key matches and UID is in scored_miners, exclude it because it has already been scored
-                if miner_key == current_weights[uid]['ss58']:
+                if uid in current_weights and miner_key == current_weights[uid]['ss58']:
                     excluded_uids.add(uid)
                     continue
 
