@@ -424,6 +424,7 @@ class TranslateValidator(Module):
             logger.info("NOT REMOVING ANY UID")
 
         uids = list(weighted_scores.keys())
+        intuids = [eval(i) for i in uids]
         weights = list(weighted_scores.values())
 
         logger.info("**********************************")
@@ -432,7 +433,7 @@ class TranslateValidator(Module):
         logger.info("**********************************")
 
         try:
-            self.client.vote(key=self.key, uids=uids, weights=weights, netuid=self.netuid)
+            self.client.vote(key=self.key, uids=intuids, weights=weights, netuid=self.netuid)
         except Exception as e:
             logger.error(f"WARNING: Failed to set weights with exception: {e}. Will retry.")
             sleepy_time = random.uniform(1, 2)
