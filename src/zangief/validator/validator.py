@@ -201,8 +201,6 @@ class TranslateValidator(Module):
         # Check if the split resulted in exactly two parts
         if len(parts) == 2:
             ip, port = parts
-            logger.info(f"IP: {ip}")
-            logger.info(f"PORT: {port}")
             return ip, port
         else:
             return None, None
@@ -329,7 +327,6 @@ class TranslateValidator(Module):
         for uid, ss58 in modules_keys.items():
             if ss58.__str__() == val_ss58:
                 self.uid = uid
-                logger.info(f"UID IS !!!!!!! {self.uid}")
 
         remaining_miners, miners_to_query = self.get_miners_to_query(miners)
 
