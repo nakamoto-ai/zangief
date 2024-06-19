@@ -14,7 +14,7 @@ def conditional_power_scaling(score_dict: Dict[int, float]) -> Dict[int, float]:
     Returns:
         A dictionary mapping miner UIDs to their adjusted scores.
     """
-    scaling_factor = 0.1
+    scaling_factor = 0.2
     mean_score = sum(score_dict.values()) / len(score_dict)
 
     transformed_scores = []
