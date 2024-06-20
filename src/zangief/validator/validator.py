@@ -150,12 +150,14 @@ class TranslateValidator(Module):
             "fa",
             "fr",
             "hi",
-            "he",
+            "it",
+            "nl",
+            "pl",
             "pt",
             "ru",
             "ur",
             "vi",
-            "zh"
+            "zh",
         ]
         cc_100 = CC100()
         self.datasets = {
@@ -167,6 +169,9 @@ class TranslateValidator(Module):
             "fr": [cc_100],
             "hi": [cc_100],
             "he": [cc_100],
+            "it": [cc_100],
+            "nl": [cc_100],
+            "pl": [cc_100],
             "pt": [cc_100],
             "ru": [cc_100],
             "ur": [cc_100],

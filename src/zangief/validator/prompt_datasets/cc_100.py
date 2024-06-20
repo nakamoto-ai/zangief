@@ -3,25 +3,27 @@ from datasets import load_dataset
 from .base_dataset import BaseDataset
 from loguru import logger
 
-
 class CC100(BaseDataset):
 
     def __init__(self):
         super().__init__()
         self.languages_by_buffer_size = {
-            "ar": 100_000,
-            "de": 100_000,
-            "en": 100_000,
-            "es": 100_000,
-            "fa": 100_000,
-            "fr": 100_000,
-            "hi": 100_000,
-            "he": 100_000,
-            "pt": 100_000,
-            "ru": 100_000,
-            "ur": 100_000,
-            "vi": 100_000,
-            "zh": 100_000,
+            "ar": 120_000,
+            "de": 120_000,
+            "en": 120_000,
+            "es": 120_000,
+            "fa": 120_000,
+            "fr": 120_000,
+            "hi": 120_000,
+            "he": 120_000,
+            "it": 120_000,
+            "nl": 120_000,
+            "pl": 120_000,
+            "pt": 120_000,
+            "ru": 120_000,
+            "ur": 120_000,
+            "vi": 120_000,
+            "zh": 120_000,
         }
         language_alias = {"zh": "zh-Hans"}
         self.datasets = {}
@@ -34,7 +36,7 @@ class CC100(BaseDataset):
                 "cc100", dataset_language, split="train", streaming=True
             )
             dataset = streaming_dataset.shuffle(
-                seed=42, buffer_size=buffer_size
+                seed=1137, buffer_size=buffer_size
             ).filter(self.filter_dataset)
             logger.info(f"Loading dataset for {language}")
             # streaming_dataset = load_dataset("cc100", dataset_language, split='train')
