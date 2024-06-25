@@ -7,3 +7,4 @@ pydantic-settings
 numpy
 loguru
 datasets
+uvloop
