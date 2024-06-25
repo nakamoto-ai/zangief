@@ -448,8 +448,7 @@ class TranslateValidator(Module):
             self.client = CommuneClient(get_node_url(use_testnet=self.use_testnet))
             self.client.vote(key=self.key, uids=intuids, weights=intweights, netuid=self.netuid)
 
-
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description="transaction validator")
     parser.add_argument("--config", type=str, default=None, help="config file path")
     args = parser.parse_args()
@@ -480,3 +479,14 @@ if __name__ == '__main__':
     )
     logger.info("Running validator ... ")
     validator.validation_loop(config)
+
+
+if __name__ == '__main__':
+
+    if sys.version_info >= (3, 11):
+        with asyncio.Runner(loop_factory=uvloop.new_event_loop) as runner:
+            runner.run(main())
+    else:
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+        main()
+    
