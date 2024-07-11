@@ -1,9 +1,14 @@
 import random
+import re
 from datasets import load_dataset
+from datasets.dataset_dict import DatasetDict, IterableDatasetDict
+from datasets.arrow_dataset import Dataset
+from datasets.iterable_dataset import IterableDataset
 from .base_dataset import BaseDataset
 from loguru import logger
-import re
 from reward_script import Reward
+from googletrans import Translator
+from typing import Any, Dict, List, Union
 
 
 class CC100(BaseDataset):
@@ -32,6 +37,7 @@ class CC100(BaseDataset):
         self.datasets = {}
         self.reward_model = Reward(device="cpu")
         self.composite_score_threshold = 0.5
+        self.translator = Translator()
 
         self.english_dataset = load_dataset("cc100", "en", split="train", streaming=True).shuffle(
             seed=1137, buffer_size=120_000
@@ -57,16 +63,16 @@ class CC100(BaseDataset):
             logger.info(f"Loaded {language} ({len(buffered_dataset)} records)")
 
     @staticmethod
-    def contains_url(text):
+    def contains_url(text: str) -> bool:
         url_pattern = re.compile(r'https?://\S+|www\.\S+')
         return bool(url_pattern.search(text))
 
     @staticmethod
-    def is_truncated(source_text, target_text, threshold=0.7):
+    def is_truncated(source_text: str, target_text: str, threshold: float = 0.7) -> bool:
         return len(target_text) < len(source_text) * threshold
 
     @staticmethod
-    def filter_dataset(example):
+    def filter_dataset(example: Dict[str, str]) -> bool:
         text = example["text"].strip()
         if len(text) <= 50:
             return False
@@ -74,20 +80,26 @@ class CC100(BaseDataset):
             return False
         return True
 
-    def filter_dataset_with_source(self, example):
+    def translate_to_english(self, text: str, src_language: str) -> str:
+        translation = self.translator.translate(text, src=src_language, dest='en')
+        return translation.text
+
+    def filter_dataset_with_source(self, example: Dict[str, str]) -> bool:
         text = example["text"].strip()
         if len(text) <= 50:
             return False
         if CC100.contains_url(text):
             return False
 
+        translated_text = self.translate_to_english(text, example["language"])
+
         for source_example in self.english_buffered:
             source_text = source_example["text"].strip()
-            if self.is_truncated(source_text, text):
+            if self.is_truncated(source_text, translated_text):
                 return False
 
         source_texts = [source_example["text"].strip() for source_example in self.english_buffered]
-        target_texts = [text] * len(source_texts)
+        target_texts = [translated_text] * len(source_texts)
         bert_scores = self.reward_model.get_bert_score(source_texts, target_texts)
         comet_scores = self.reward_model.get_comet_score(source_texts, target_texts)
         for bert_score, comet_score in zip(bert_scores, comet_scores):
@@ -97,11 +109,16 @@ class CC100(BaseDataset):
 
         return True
 
-    def buffer_dataset(self, dataset, language):
+    def buffer_dataset(
+        self,
+        dataset: Union[DatasetDict, Dataset, IterableDatasetDict, IterableDataset],
+        language: str
+    ) -> List[Dict[str, Any]]:
         buffer_size = self.languages_by_buffer_size[language]
         buffer = []
         try:
             for item in dataset:
+                item["language"] = language
                 if len(buffer) < buffer_size:
                     buffer.append(item)
                 else:
@@ -110,6 +127,6 @@ class CC100(BaseDataset):
             pass
         return buffer
 
-    def get_random_record(self, language="es") -> str:
+    def get_random_record(self, language: str = "es") -> str:
         row = random.choice(self.datasets[language])
         return row["text"]
