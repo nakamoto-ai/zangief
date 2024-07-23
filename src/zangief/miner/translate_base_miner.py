@@ -22,7 +22,7 @@ from src.zangief.miner.config import Config
 
 
 def get_netuid(is_testnet) -> int:
-    return 23 if is_testnet else 1
+    return 23 if is_testnet else 13
 
 
 class BaseMiner(Module):
