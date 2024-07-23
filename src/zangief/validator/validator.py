@@ -44,7 +44,7 @@ def extract_address(string: str):
 
 def get_miner_ip_port(client: CommuneClient, netuid: int, balances=False):
     modules = cast(dict[str, Any], get_map_modules(
-    client, netuid=netuid, include_balances=balances))
+        client, netuid=netuid, include_balances=balances))
 
     # Convert the values to a human readable format
     modules_to_list = [value for _, value in modules.items()]
@@ -57,7 +57,7 @@ def get_miner_ip_port(client: CommuneClient, netuid: int, balances=False):
         elif module["incentive"] > module["dividends"]:
             miners.append(module)
 
-    return miners 
+    return miners
 
 
 def get_ip_port(modules_adresses: dict[int, str]):
@@ -83,7 +83,7 @@ def get_netuid(is_testnet):
     if is_testnet:
         return 23
     else:
-        return 1
+        return 13
 
 
 def normalize_scores(scores):
@@ -192,15 +192,15 @@ class TranslateValidator(Module):
         """
         module_addresses = client.query_map_address(netuid)
         return module_addresses
-    
+
     def split_ip_port(self, ip_port):
         # Check if the input is empty or None
         if not ip_port:
             return None, None
-        
+
         # Split the input string by the colon
         parts = ip_port.split(":")
-        
+
         # Check if the split resulted in exactly two parts
         if len(parts) == 2:
             ip, port = parts
@@ -227,7 +227,7 @@ class TranslateValidator(Module):
         connection = miner_info['address']
         miner_key = miner_info['key']
         module_ip, module_port = self.split_ip_port(connection)
-        
+
         if module_ip == "None" or module_port == "None":
             return ""
 
@@ -326,7 +326,7 @@ class TranslateValidator(Module):
         if val_ss58 not in modules_keys.values():
             logger.error(f"Validator key {val_ss58} is not registered in subnet")
             return None
-        
+
         for uid, ss58 in modules_keys.items():
             if ss58.__str__() == val_ss58:
                 self.uid = uid
@@ -420,7 +420,8 @@ class TranslateValidator(Module):
             weight = score * 1000 / scores
             weighted_scores[uid] = weight
 
-        weighted_scores = {k: v for k, v in zip(weighted_scores.keys(), normalize_scores(weighted_scores.values())) if v != 0}
+        weighted_scores = {k: v for k, v in zip(
+            weighted_scores.keys(), normalize_scores(weighted_scores.values())) if v != 0}
 
         if self.uid is not None and str(self.uid) in weighted_scores:
             del weighted_scores[str(self.uid)]
