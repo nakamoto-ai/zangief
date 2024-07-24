@@ -46,7 +46,17 @@ source venv/bin/activate
 
 `comx module register <name> <your_commune_key> --netuid 1`
 
-4) Run the validator
+4) Set the `.env` file
+
+Copy the example template:
+
+```bash
+cp .env.example .env
+```
+
+Then insert your key name into the `KEY_NAME` value.
+
+5) Run the validator
 
 ```
 python src/zangief/validator/validator.py
@@ -59,22 +69,30 @@ sudo apt install jq -y && sudo apt install npm -y && sudo npm install pm2 -g && 
 pm2 start --name zangief-vali "python src/zangief/validator/validator.py"
 ```
 
+6) (Optional) Setting custom `.env` file path. 
+
+When running, add the cli argument `--env <your-env-file>`
+
+7) (Optional) Ignore the `.env` file.
+
+When running, add the cli argument `--ignore-env-file` and the validator will use the environment 
+values already set on the system.
+
 (Optional) Run on testnet
 
 1) Register the validator on the testnet
 
 `comx --testnet module register <name> <your_commune_key> --netuid 23`
 
-2) Set the config.ini file to `isTestnet = 1`
+2) Set the `.env` file
 
-`env/config.ini` 
+Copy the example template:
+
+```bash
+cp .env.example .env
 ```
-[validator]
-name = validator
-keyfile = validator
-interval = 600
-isTestnet = 1
-```
+
+Then insert your key name into the `KEY_NAME` value, and set `TESTNET=1`.
 
 3) Run the validator
 

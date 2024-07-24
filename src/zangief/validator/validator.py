@@ -8,8 +8,6 @@ import numpy as np
 import random
 import argparse
 from typing import cast, Any
-from datetime import datetime
-import copy
 
 from communex.client import CommuneClient
 from communex.module.client import ModuleClient
@@ -18,16 +16,17 @@ from communex.compat.key import classic_load_key
 from communex.module.module import Module
 from communex.types import Ss58Address
 from communex.misc import get_map_modules
-from substrateinterface import Keypair
-from weights_io import ensure_weights_file, write_weight_file, read_weight_file
-from power_scaling import conditional_power_scaling
 
-from config import Config
+from substrateinterface import Keypair
+
 from loguru import logger
 
-
+from weights_io import ensure_weights_file, write_weight_file, read_weight_file
+from power_scaling import conditional_power_scaling
 from reward import Reward
 from prompt_datasets.cc_100 import CC100
+
+from zangief.config.validator import ValidatorConfig
 
 
 logger.add("logs/log_{time:YYYY-MM-DD}.log", rotation="1 day", level="INFO")
@@ -150,6 +149,7 @@ class TranslateValidator(Module):
             "fa",
             "fr",
             "hi",
+            "he",
             "it",
             "nl",
             "pl",
@@ -394,12 +394,11 @@ class TranslateValidator(Module):
             self.set_weights(s_dict)
             write_weight_file(self.weights_file, {})
 
-    def validation_loop(self, config: Config | None = None) -> None:
+    def validation_loop(self, interval: int = 20) -> None:
         while True:
             logger.info("Begin validator step ... ")
             asyncio.run(self.validate_step(self.netuid))
 
-            interval = int(config.validator.get("interval"))
             logger.info(f"Sleeping for {interval} seconds ... ")
             time.sleep(interval)
 
@@ -451,33 +450,33 @@ class TranslateValidator(Module):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="transaction validator")
-    parser.add_argument("--config", type=str, default=None, help="config file path")
+    parser = argparse.ArgumentParser(description="zangief validator")
+    parser.add_argument("--env", type=str, default=".env", help="config file path")
+    parser.add_argument('--ignore-env-file', action='store_true', help='If set, ignore .env file')
     args = parser.parse_args()
 
     logger.info("Loading validator config ... ")
-    if args.config is None:
-        default_config_path = 'env/config.ini'
-        config_file = default_config_path
-    else:
-        config_file = args.config
-    config = Config(config_file=config_file)
 
-    use_testnet = True if config.validator.get("testnet") == "1" else False
-    if use_testnet:
+    # Load config, and get the values.
+    validator_config = ValidatorConfig(env_path=args.env, ignore_config_file=args.ignore_env_file)
+    testnet = validator_config.get_testnet()
+    keyname = validator_config.get_key_name()
+    netuid = validator_config.get_netuid()
+    call_timeout = validator_config.get_validator_call_timeout()
+    interval = validator_config.get_validator_interval()
+
+    if testnet:
         logger.info("Connecting to TEST network ... ")
     else:
         logger.info("Connecting to Main network ... ")
-    c_client = CommuneClient(get_node_url(use_testnet=use_testnet))
-    subnet_uid = get_netuid(use_testnet)
-    keypair = classic_load_key(config.validator.get("keyfile"))
 
     validator = TranslateValidator(
-        keypair,
-        subnet_uid,
-        c_client,
-        call_timeout=20,
-        use_testnet=use_testnet
+        key=classic_load_key(keyname),
+        netuid=netuid,
+        client=CommuneClient(get_node_url(use_testnet=testnet)),
+        call_timeout=call_timeout,
+        use_testnet=testnet
     )
+
     logger.info("Running validator ... ")
-    validator.validation_loop(config)
+    validator.validation_loop(interval=interval)
