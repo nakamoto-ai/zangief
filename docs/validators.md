@@ -40,13 +40,16 @@ source venv/bin/activate
 
 3) Install dependencies
 
-`pip install -r validator_requirements.txt`
+```bash
+python -m pip install -r validator_requirements.txt
+python -m pip install -e .
+```
 
-3) Register the validator
+4) Register the validator
 
 `comx module register <name> <your_commune_key> --netuid 1`
 
-4) Set the `.env` file
+5) Set the `.env` file
 
 Copy the example template:
 
@@ -56,7 +59,7 @@ cp .env.example .env
 
 Then insert your key name into the `KEY_NAME` value.
 
-5) Run the validator
+6) Run the validator
 
 ```
 python src/zangief/validator/validator.py
@@ -69,11 +72,11 @@ sudo apt install jq -y && sudo apt install npm -y && sudo npm install pm2 -g && 
 pm2 start --name zangief-vali "python src/zangief/validator/validator.py"
 ```
 
-6) (Optional) Setting custom `.env` file path. 
+7) (Optional) Setting custom `.env` file path. 
 
 When running, add the cli argument `--env <your-env-file>`
 
-7) (Optional) Ignore the `.env` file.
+8) (Optional) Ignore the `.env` file.
 
 When running, add the cli argument `--ignore-env-file` and the validator will use the environment 
 values already set on the system.
