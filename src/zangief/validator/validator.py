@@ -7,7 +7,9 @@ from functools import partial
 import numpy as np
 import random
 import argparse
-from typing import cast, Any
+from typing import cast, Any, Tuple
+import time
+from contextlib import contextmanager
 
 from communex.client import CommuneClient
 from communex.module.client import ModuleClient
@@ -97,6 +99,17 @@ def normalize_scores(scores):
     normalized_scores = [(score - min_score) / (max_score - min_score) for score in scores]
 
     return normalized_scores
+
+
+@contextmanager
+def measure_time():
+    start_time = time.time()
+    elapsed_time = None
+    try:
+        yield lambda: elapsed_time
+    finally:
+        end_time = time.time()
+        elapsed_time = end_time - start_time
 
 
 class TranslateValidator(Module):
@@ -212,7 +225,7 @@ class TranslateValidator(Module):
         self,
         prompt: str,
         miner_info: tuple[list[str], Ss58Address],
-    ) -> str | None:
+    ) -> Tuple[str | None, int]:
         """
         Prompt a miner module to generate an answer to the given question.
 
@@ -234,19 +247,22 @@ class TranslateValidator(Module):
         client = ModuleClient(module_ip, int(module_port), self.key)
 
         try:
-            miner_answer = asyncio.run(
-                client.call(
-                    "generate",
-                    miner_key,
-                    {"prompt": question, "source_language": source_language, "target_language": target_language},
-                    timeout=self.call_timeout,
+            with measure_time() as get_elapsed_time:
+                miner_answer = asyncio.run(
+                    client.call(
+                        "generate",
+                        miner_key,
+                        {"prompt": question, "source_language": source_language, "target_language": target_language},
+                        timeout=self.call_timeout,
+                    )
                 )
-            )
+            elapsed_time = get_elapsed_time()
             miner_answer = miner_answer["answer"]
         except Exception as e:
             logger.error(f"Error getting miner response: {e}")
             miner_answer = None
-        return miner_answer
+            elapsed_time = 0
+        return miner_answer, elapsed_time
 
     def get_miners_to_query(self, miners: list[dict[str, Any]]):
         current_weights = read_weight_file(self.weights_file)
@@ -350,11 +366,12 @@ class TranslateValidator(Module):
             miner_answers = [*it]
 
         scores = self.reward.get_scores(miner_prompt, target_language, miner_answers)
+        miner_answers_log = [a for (a, b) in miner_answers]
 
         logger.debug("Miner prompt")
         logger.debug(miner_prompt)
         logger.debug("Miner answers")
-        logger.debug(miner_answers)
+        logger.debug(miner_answers_log)
         logger.debug("Raw scores")
         logger.debug(scores)
 

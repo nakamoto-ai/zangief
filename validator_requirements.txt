@@ -9,3 +9,6 @@ unbabel-comet
 bert-score
 datasets
 langid
+nltk
+sentence_transformers
+python-Levenshtein
