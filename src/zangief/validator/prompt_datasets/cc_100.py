@@ -98,15 +98,6 @@ class CC100(BaseDataset):
             if self.is_truncated(source_text, translated_text):
                 return False
 
-        source_texts = [source_example["text"].strip() for source_example in self.english_buffered]
-        target_texts = [translated_text] * len(source_texts)
-        bert_scores = self.reward_model.get_bert_score(source_texts, target_texts)
-        comet_scores = self.reward_model.get_comet_score(source_texts, target_texts)
-        for bert_score, comet_score in zip(bert_scores, comet_scores):
-            composite_score = self.reward_model.get_composite_score(bert_score, comet_score)
-            if composite_score < self.composite_score_threshold:
-                return False
-
         return True
 
     def buffer_dataset(
