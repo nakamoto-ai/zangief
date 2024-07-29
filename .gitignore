@@ -1,3 +1,4 @@
+.gitignore
 /.direnv
 /.idea
 /safe
@@ -10,6 +11,7 @@
 .venv
 weights1.json
 testing.py
+/env/config.ini
 
 
 node_modules
