@@ -228,7 +228,7 @@ class TranslateValidator(Module):
         miner_key = miner_info['key']
         module_ip, module_port = self.split_ip_port(connection)
 
-        if module_ip == "None" or module_port == "None":
+        if module_ip == "None" or module_port == "None" or module_ip is None or module_port is None:
             return ""
 
         client = ModuleClient(module_ip, int(module_port), self.key)
