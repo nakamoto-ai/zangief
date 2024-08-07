@@ -9,3 +9,4 @@ unbabel-comet
 bert-score
 datasets
 langid
+googletrans
