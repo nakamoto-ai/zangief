@@ -465,9 +465,6 @@ if __name__ == '__main__':
     call_timeout = validator_config.get_validator_call_timeout()
     interval = validator_config.get_validator_interval()
 
-    testnet = True
-    netuid = 23
-
     if testnet:
         logger.info("Connecting to TEST network ... ")
     else:
