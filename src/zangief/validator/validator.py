@@ -123,7 +123,7 @@ class TranslateValidator(Module):
         key: Keypair,
         netuid: int,
         client: CommuneClient,
-        call_timeout: int = 20,
+        call_timeout: int = 200,
         use_testnet: bool = False,
     ) -> None:
         super().__init__()
@@ -243,10 +243,10 @@ class TranslateValidator(Module):
                 )
             )
             miner_answer = miner_answer["answer"]
+            return miner_answer
         except Exception as e:
             logger.error(f"Error getting miner response: {e}")
             return ""
-        return miner_answer
 
     def get_miners_to_query(self, miners: list[dict[str, Any]]):
         current_weights = read_weight_file(self.weights_file)
