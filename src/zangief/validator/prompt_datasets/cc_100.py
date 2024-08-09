@@ -16,23 +16,40 @@ class CC100(BaseDataset):
         super().__init__()
         self.languages_by_buffer_size = {
             "ar": 120_000,
+            "bn": 120_000,
+            "cs": 120_000,
             "de": 120_000,
+            "el": 120_000,
             "en": 120_000,
             "es": 120_000,
             "fa": 120_000,
             "fr": 120_000,
-            "hi": 120_000,
             "he": 120_000,
+            "hi": 120_000,
+            "hu": 120_000,
             "it": 120_000,
+            "ja": 120_000,
+            "jv": 120_000,
+            "ko": 120_000,
+            "my": 120_000,
             "nl": 120_000,
+            "pa": 120_000,
             "pl": 120_000,
             "pt": 120_000,
+            "ro": 120_000,
             "ru": 120_000,
+            "sv": 120_000,
+            "ta": 120_000,
+            "te": 120_000,
+            "th": 120_000,
+            "tr": 120_000,
+            "uk": 120_000,
             "ur": 120_000,
             "vi": 120_000,
             "zh": 120_000,
+            "zht": 120_000,
         }
-        language_alias = {"zh": "zh-Hans"}
+        language_alias = {"zh": "zh-Hans", "zht": "zh-Hant"}
         self.datasets = {}
         for language in self.languages_by_buffer_size:
             buffer_size = self.languages_by_buffer_size[language]

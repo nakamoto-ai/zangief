@@ -244,7 +244,7 @@ class TranslateValidator(Module):
             )
             miner_answer = miner_answer["answer"]
         except Exception as e:
-            logger.error(f"Error getting miner response: {e}")
+            logger.info(f"Error getting miner response: {e}")
             miner_answer = None
         return miner_answer
 
