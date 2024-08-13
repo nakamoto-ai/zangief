@@ -43,14 +43,32 @@ class Reward:
         return normalized_scores
 
     def get_ngram_precision(self, source: str, target: str, n: int) -> float:
+
+        if n == 2:
+            print("Bigram")
+        if n == 3:
+            print("Trigram")
+
+        source = source.lower()
+        target = target.lower()
+
+        source = source.translate(str.maketrans('', '', string.punctuation))
+        target = target.translate(str.maketrans('', '', string.punctuation))
+
         target_ngrams = list(ngrams(target.split(), n))
         source_ngrams = list(ngrams(source.split(), n))
+
+        print(f"N={n}, Target n-grams: {target_ngrams}")
+        print(f"N={n}, Source n-grams: {source_ngrams}")
 
         target_counter = Counter(target_ngrams)
         source_counter = Counter(source_ngrams)
 
         match_count = sum(min(target_counter[ng], source_counter[ng]) for ng in target_counter)
         total_target_ngrams = len(target_ngrams)
+
+        print(f"Match count: {match_count}")
+        print(f"Total target n-grams: {total_target_ngrams}")
 
         if total_target_ngrams == 0:
             return 0.0
@@ -60,8 +78,6 @@ class Reward:
     def get_ngram_score(self, sources: List[str], targets: List[str]) -> List[float]:
         scores = []
         for target, source in zip(targets, sources):
-            target = target.lower().translate(str.maketrans('', '', string.punctuation))
-            source = source.lower().translate(str.maketrans('', '', string.punctuation))
             word_count = len(target.split())
 
             if word_count == 1:
