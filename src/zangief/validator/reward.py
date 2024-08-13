@@ -12,6 +12,7 @@ from transformers import pipeline
 import Levenshtein
 from typing import List, Dict, Tuple, Any
 import string
+from difflib import SequenceMatcher
 
 
 class Reward:
@@ -43,27 +44,35 @@ class Reward:
         return normalized_scores
 
     def get_ngram_precision(self, source: str, target: str, n: int) -> float:
-
         if n == 2:
             print("Bigram")
         if n == 3:
             print("Trigram")
 
-        source = source.lower()
-        target = target.lower()
+        # Convert to lowercase and remove punctuation
+        source = source.lower().translate(str.maketrans('', '', string.punctuation))
+        target = target.lower().translate(str.maketrans('', '', string.punctuation))
 
-        source = source.translate(str.maketrans('', '', string.punctuation))
-        target = target.translate(str.maketrans('', '', string.punctuation))
+        # Tokenize the sentences
+        source_tokens = source.split()
+        target_tokens = target.split()
 
-        target_ngrams = list(ngrams(target.split(), n))
-        source_ngrams = list(ngrams(source.split(), n))
+        # Handle edge cases where the n-gram size is larger than the token count
+        if len(source_tokens) < n or len(target_tokens) < n:
+            return 0.0
+
+        # Generate n-grams
+        source_ngrams = list(ngrams(source_tokens, n))
+        target_ngrams = list(ngrams(target_tokens, n))
 
         print(f"N={n}, Target n-grams: {target_ngrams}")
         print(f"N={n}, Source n-grams: {source_ngrams}")
 
+        # Count occurrences of n-grams
         target_counter = Counter(target_ngrams)
         source_counter = Counter(source_ngrams)
 
+        # Calculate matches
         match_count = sum(min(target_counter[ng], source_counter[ng]) for ng in target_counter)
         total_target_ngrams = len(target_ngrams)
 
@@ -87,7 +96,13 @@ class Reward:
             else:
                 bigram_score = self.get_ngram_precision(source, target, 2)  # Bigram score
                 trigram_score = self.get_ngram_precision(source, target, 3)  # Trigram score
-                score = (bigram_score + trigram_score) / 2  # Average of bigram and trigram scores
+
+                # Consider partial matching using Levenshtein distance (similarity ratio)
+                similarity_ratio = SequenceMatcher(None, source, target).ratio()
+                print(f"Levenshtein similarity ratio: {similarity_ratio}")
+
+                # Weighted average of bigram, trigram, and similarity ratio
+                score = (bigram_score + trigram_score + similarity_ratio) / 3
 
             scores.append(score)
 
