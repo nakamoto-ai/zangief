@@ -13,6 +13,7 @@ import Levenshtein
 from typing import List, Dict, Tuple, Any
 import string
 from difflib import SequenceMatcher
+from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 
 
 class Reward:
@@ -43,68 +44,91 @@ class Reward:
         normalized_scores = [(score + 1) / 2 for score in comet_scores]
         return normalized_scores
 
-    def get_ngram_precision(self, source: str, target: str, n: int) -> float:
-        if n == 2:
-            print("Bigram")
-        if n == 3:
-            print("Trigram")
+    # def get_ngram_precision(self, source: str, target: str, n: int) -> float:
+    #     if n == 2:
+    #         print("Bigram")
+    #     if n == 3:
+    #         print("Trigram")
+    #
+    #     # Convert to lowercase and remove punctuation
+    #     source = source.lower().translate(str.maketrans('', '', string.punctuation))
+    #     target = target.lower().translate(str.maketrans('', '', string.punctuation))
+    #
+    #     # Tokenize the sentences
+    #     source_tokens = source.split()
+    #     target_tokens = target.split()
+    #
+    #     # Handle edge cases where the n-gram size is larger than the token count
+    #     if len(source_tokens) < n or len(target_tokens) < n:
+    #         return 0.0
+    #
+    #     # Generate n-grams
+    #     source_ngrams = list(ngrams(source_tokens, n))
+    #     target_ngrams = list(ngrams(target_tokens, n))
+    #
+    #     print(f"N={n}, Target n-grams: {target_ngrams}")
+    #     print(f"N={n}, Source n-grams: {source_ngrams}")
+    #
+    #     # Count occurrences of n-grams
+    #     target_counter = Counter(target_ngrams)
+    #     source_counter = Counter(source_ngrams)
+    #
+    #     # Calculate matches
+    #     match_count = sum(min(target_counter[ng], source_counter[ng]) for ng in target_counter)
+    #     total_target_ngrams = len(target_ngrams)
+    #
+    #     print(f"Match count: {match_count}")
+    #     print(f"Total target n-grams: {total_target_ngrams}")
+    #
+    #     if total_target_ngrams == 0:
+    #         return 0.0
+    #
+    #     return match_count / total_target_ngrams
+    #
+    # def get_ngram_score(self, sources: List[str], targets: List[str]) -> List[float]:
+    #     scores = []
+    #     for target, source in zip(targets, sources):
+    #         word_count = len(target.split())
+    #
+    #         if word_count == 1:
+    #             score = 1.0  # Max score for 1 word
+    #         elif word_count == 2:
+    #             score = self.get_ngram_precision(source, target, 2)  # Use bigrams for 2 words
+    #         else:
+    #             bigram_score = self.get_ngram_precision(source, target, 2)  # Bigram score
+    #             trigram_score = self.get_ngram_precision(source, target, 3)  # Trigram score
+    #
+    #             # Consider partial matching using Levenshtein distance (similarity ratio)
+    #             similarity_ratio = SequenceMatcher(None, source, target).ratio()
+    #             print(f"Levenshtein similarity ratio: {similarity_ratio}")
+    #
+    #             # Weighted average of bigram, trigram, and similarity ratio
+    #             score = (bigram_score + trigram_score + similarity_ratio) / 3
+    #
+    #         scores.append(score)
+    #
+    #     return scores
 
-        # Convert to lowercase and remove punctuation
-        source = source.lower().translate(str.maketrans('', '', string.punctuation))
-        target = target.lower().translate(str.maketrans('', '', string.punctuation))
+    def get_bleu_score(self, sources: List[str], targets: List[str], n: int = 4) -> List[float]:
+        """
+        Calculate BLEU scores for a list of source-target pairs.
 
-        # Tokenize the sentences
-        source_tokens = source.split()
-        target_tokens = target.split()
-
-        # Handle edge cases where the n-gram size is larger than the token count
-        if len(source_tokens) < n or len(target_tokens) < n:
-            return 0.0
-
-        # Generate n-grams
-        source_ngrams = list(ngrams(source_tokens, n))
-        target_ngrams = list(ngrams(target_tokens, n))
-
-        print(f"N={n}, Target n-grams: {target_ngrams}")
-        print(f"N={n}, Source n-grams: {source_ngrams}")
-
-        # Count occurrences of n-grams
-        target_counter = Counter(target_ngrams)
-        source_counter = Counter(source_ngrams)
-
-        # Calculate matches
-        match_count = sum(min(target_counter[ng], source_counter[ng]) for ng in target_counter)
-        total_target_ngrams = len(target_ngrams)
-
-        print(f"Match count: {match_count}")
-        print(f"Total target n-grams: {total_target_ngrams}")
-
-        if total_target_ngrams == 0:
-            return 0.0
-
-        return match_count / total_target_ngrams
-
-    def get_ngram_score(self, sources: List[str], targets: List[str]) -> List[float]:
+        :param sources: A list of source sentences.
+        :param targets: A list of target sentences.
+        :param n: Maximum n-gram order to use when calculating BLEU score (default is 4).
+        :return: A list of BLEU scores.
+        """
         scores = []
+        smoothing_function = SmoothingFunction().method1
+
         for target, source in zip(targets, sources):
-            word_count = len(target.split())
+            reference = [target.split()]  # BLEU expects a list of references
+            candidate = source.split()
 
-            if word_count == 1:
-                score = 1.0  # Max score for 1 word
-            elif word_count == 2:
-                score = self.get_ngram_precision(source, target, 2)  # Use bigrams for 2 words
-            else:
-                bigram_score = self.get_ngram_precision(source, target, 2)  # Bigram score
-                trigram_score = self.get_ngram_precision(source, target, 3)  # Trigram score
-
-                # Consider partial matching using Levenshtein distance (similarity ratio)
-                similarity_ratio = SequenceMatcher(None, source, target).ratio()
-                print(f"Levenshtein similarity ratio: {similarity_ratio}")
-
-                # Weighted average of bigram, trigram, and similarity ratio
-                score = (bigram_score + trigram_score + similarity_ratio) / 3
-
-            scores.append(score)
+            # Calculate BLEU score with smoothing to handle cases with no overlap
+            bleu_score = sentence_bleu(reference, candidate, weights=[1.0 / n] * n,
+                                       smoothing_function=smoothing_function)
+            scores.append(bleu_score)
 
         return scores
 
@@ -187,8 +211,8 @@ class Reward:
         clipped_score = min(max(raw_score, 0), 1)
         return clipped_score
 
-    def get_contextual_score(self, ngram_score: float, semantic_fluency_score: float, sentiment_score: float):
-        raw_score = ngram_score / 3 + semantic_fluency_score / 3 + sentiment_score / 3
+    def get_contextual_score(self, bleu_score: float, semantic_fluency_score: float, sentiment_score: float):
+        raw_score = bleu_score / 3 + semantic_fluency_score / 3 + sentiment_score / 3
         clipped_score = min(max(raw_score, 0), 1)
         return clipped_score
 
@@ -240,8 +264,10 @@ class Reward:
             print(f"BERT Scores: {bert_scores}")
             comet_scores = self.get_comet_score(sources, cleaned_targets)
             print(f"COMET Scores: {comet_scores}")
-            ngram_scores = self.get_ngram_score(sources, cleaned_targets)
-            print(f"N-Gram Scores: {ngram_scores}")
+            # ngram_scores = self.get_ngram_score(sources, cleaned_targets)
+            # print(f"N-Gram Scores: {ngram_scores}")
+            bleu_scores = self.get_bleu_score(sources, cleaned_targets)
+            print(f"BLEU Scores: {bleu_scores}")
             levenshtein_scores = self.get_levenshtein_score(sources, cleaned_targets)
             print(f"Levenshtein Scores: {levenshtein_scores}")
             semantic_adequacy_scores = self.get_semantic_adequacy_score(sources, cleaned_targets)
@@ -249,13 +275,13 @@ class Reward:
             sentiment_scores = self.get_sentiment_score(sources, cleaned_targets)
             print(f"Sentiment Scores: {sentiment_scores}")
             speed_scores = self.get_speed_score(cleaned_times)
-            for (target, bert_score, comet_score, ngram_score, levenshtein_score,
+            for (target, bert_score, comet_score, bleu_score, levenshtein_score,
                  semantic_adequacy_score, sentiment_score, speed_score) in zip(
-                cleaned_targets, bert_scores, comet_scores, ngram_scores, levenshtein_scores,
+                cleaned_targets, bert_scores, comet_scores, bleu_scores, levenshtein_scores,
                 semantic_adequacy_scores, sentiment_scores, speed_scores
             ):
                 literal_score = self.get_literal_score(bert_score, comet_score, levenshtein_score)
-                contextual_score = self.get_contextual_score(ngram_score, semantic_adequacy_score, sentiment_score)
+                contextual_score = self.get_contextual_score(bleu_score, semantic_adequacy_score, sentiment_score)
                 composite_score = self.get_composite_score(literal_score, contextual_score, speed_score)
                 if composite_score > 1:
                     composite_score = 1
