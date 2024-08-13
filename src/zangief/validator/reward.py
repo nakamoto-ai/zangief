@@ -58,46 +58,41 @@ class Reward:
 
         return match_count / total_target_ngrams
 
-    def adjust_ngram_length(self, target: str) -> int:
-        word_count = len(target.split())
-
-        if word_count <= 1:
-            return 1  # Max score for 1 or fewer n-grams
-        elif word_count == 2:
-            return 2  # Use bigrams for 2 words
-        elif word_count >= 5:
-            return 3  # Use trigrams for 5 or more words
-        else:
-            return 2  # Default to bigrams for other cases
-
     def get_ngram_score(self, sources: List[str], targets: List[str]) -> List[float]:
         scores = []
         for target, source in zip(targets, sources):
-            n = self.adjust_ngram_length(target)
-            if n == 1:
-                score = 1.0  # Max score for 1 or fewer n-grams
+            word_count = len(target.split())
+
+            if word_count == 1:
+                score = 1.0  # Max score for 1 word
+            elif word_count == 2:
+                score = self.get_ngram_precision(source, target, 2)  # Use bigrams for 2 words
             else:
-                score = self.get_ngram_precision(target, source, n)
+                bigram_score = self.get_ngram_precision(source, target, 2)  # Bigram score
+                trigram_score = self.get_ngram_precision(source, target, 3)  # Trigram score
+                score = (bigram_score + trigram_score) / 2  # Average of bigram and trigram scores
+
             scores.append(score)
-        return scores
-
-    def get_semantic_adequacy_score(self, sources: List[str], targets: List[str]) -> List[float]:
-        model = self.sem_adequacy_model
-
-        # Compute embeddings for targets and sources
-        target_embeddings = model.encode(targets, convert_to_tensor=True)
-        source_embeddings = model.encode(sources, convert_to_tensor=True)
-
-        # Compute cosine similarities
-        scores = []
-        for target_emb, source_emb in zip(target_embeddings, source_embeddings):
-            similarity = util.pytorch_cos_sim(target_emb, source_emb).item()
-            scores.append(similarity)
 
         return scores
 
-    def calculate_perplexity(self, model: GPT2LMHeadModel.from_pretrained(),
-                             tokenizer: GPT2Tokenizer.from_pretrained(), text: str) -> float:
+    # def get_semantic_adequacy_score(self, sources: List[str], targets: List[str]) -> List[float]:
+    #     model = self.sem_adequacy_model
+    #
+    #     # Compute embeddings for targets and sources
+    #     target_embeddings = model.encode(targets, convert_to_tensor=True)
+    #     source_embeddings = model.encode(sources, convert_to_tensor=True)
+    #
+    #     # Compute cosine similarities
+    #     scores = []
+    #     for target_emb, source_emb in zip(target_embeddings, source_embeddings):
+    #         similarity = util.pytorch_cos_sim(target_emb, source_emb).item()
+    #         normalized_similarity = (similarity + 1) / 2  # Normalize to range [0, 1]
+    #         scores.append(normalized_similarity)
+    #
+    #     return scores
+
+    def calculate_perplexity(self, model, tokenizer, text: str) -> float:
         encodings = tokenizer(text, return_tensors='pt')
         max_length = model.config.n_positions
         stride = 512
@@ -131,13 +126,12 @@ class Reward:
 
             # Normalize target perplexity by source perplexity to account for complexity
             normalized_fluency_score = target_perplexity / source_perplexity
-            scores.append(normalized_fluency_score)
+
+            # Transform to ensure the score is within [0, 1]
+            final_score = 1 / (1 + normalized_fluency_score)
+            scores.append(final_score)
 
         return scores
-
-    def analyze_sentiment(self, text: str) -> dict:
-        sentiment = self.sentiment_pipeline(text)
-        return sentiment[0]
 
     def get_sentiment_score(self, sources: List[str], targets: List[str]) -> List[float]:
         sentiment_pipeline = self.sentiment_pipeline
@@ -151,8 +145,10 @@ class Reward:
             if target_sentiment['label'] == source_sentiment['label']:
                 score = 1 - abs(target_sentiment['score'] - source_sentiment['score'])
             else:
-                score = 0  # If sentiments are different, assign a score of 0
+                score = 0.0  # If sentiments are different, assign a score of 0
 
+            # Ensure the score is within [0, 1] range
+            score = max(0.0, min(score, 1.0))
             scores.append(score)
 
         return scores
@@ -164,22 +160,26 @@ class Reward:
         scores = []
         for target, source in zip(targets, sources):
             distance = self.calculate_levenshtein_distance(target, source)
-            scores.append(distance)
+            max_len = max(len(target), len(source))
+            if max_len == 0:
+                score = 1.0  # If both strings are empty, they are perfectly similar
+            else:
+                score = 1 - (distance / max_len)  # Normalize the distance to [0, 1]
+            scores.append(score)
         return scores
 
-    def get_literal_score(self, bert_score: float, levenshtein_score: float, ngram_score: float) -> float:
-        raw_score = bert_score / 3 + levenshtein_score / 3 + ngram_score / 3
+    def get_literal_score(self, bert_score: float, comet_score: float, levenshtein_score: float) -> float:
+        raw_score = bert_score / 3 + comet_score / 3 + levenshtein_score / 3
         clipped_score = min(max(raw_score, 0), 1)
         return clipped_score
 
-    def get_contextual_score(self, comet_score: float, semantic_adequacy_score: float,
-                             semantic_fluency_score: float) -> float:
-        raw_score = comet_score / 3 + semantic_adequacy_score / 3 + semantic_fluency_score / 3
+    def get_contextual_score(self, ngram_score: float, semantic_fluency_score: float, sentiment_score: float):
+        raw_score = ngram_score / 3 + semantic_fluency_score / 3 + sentiment_score / 3
         clipped_score = min(max(raw_score, 0), 1)
         return clipped_score
 
-    def get_composite_score(self, literal_score: float, contextual_score: float, sentiment_score: float, speed_score: float) -> float:
-        raw_score = contextual_score * 0.4 + literal_score * 0.3 + sentiment_score * 0.2 + speed_score * 0.1
+    def get_composite_score(self, literal_score: float, contextual_score: float, speed_score: float) -> float:
+        raw_score = contextual_score * 0.5 + literal_score * 0.3 + speed_score * 0.2
         clipped_score = min(max(raw_score, 0), 1)
         return clipped_score
 
@@ -207,7 +207,7 @@ class Reward:
             speed_scores.append(speed_score)
         return speed_scores
 
-    def get_scores(self, source: str, target_language: str, targets: Dict[str, Tuple[str, float]]) -> List[float]:
+    def get_scores(self, source: str, target_language: str, targets: List[Tuple[str, float]]) -> List[float]:
         cleaned_targets = []
         cleaned_times = []
         empty_indexes = []
@@ -223,23 +223,26 @@ class Reward:
         if len(cleaned_targets) > 0:
             sources = [source] * len(cleaned_targets)
             bert_scores = self.get_bert_score(sources, cleaned_targets)
+            print(f"BERT Scores: {bert_scores}")
             comet_scores = self.get_comet_score(sources, cleaned_targets)
+            print(f"COMET Scores: {comet_scores}")
             ngram_scores = self.get_ngram_score(sources, cleaned_targets)
+            print(f"N-Gram Scores: {ngram_scores}")
             levenshtein_scores = self.get_levenshtein_score(sources, cleaned_targets)
-            semantic_adequacy_scores = self.get_semantic_adequacy_score(sources, cleaned_targets)
+            print(f"Levenshtein Scores: {levenshtein_scores}")
             semantic_fluency_scores = self.get_semantic_fluency_score(sources, cleaned_targets)
+            print(f"Semantic Fluency Scores: {semantic_fluency_scores}")
             sentiment_scores = self.get_sentiment_score(sources, cleaned_targets)
+            print(f"Sentiment Scores: {sentiment_scores}")
             speed_scores = self.get_speed_score(cleaned_times)
-            for (target, bert_score, comet_score, ngram_score, levenshtein_score, semantic_adequacy_score,
+            for (target, bert_score, comet_score, ngram_score, levenshtein_score,
                  semantic_fluency_score, sentiment_score, speed_score) in zip(
                 cleaned_targets, bert_scores, comet_scores, ngram_scores, levenshtein_scores,
-                semantic_adequacy_scores, semantic_fluency_scores, sentiment_scores, speed_scores
+                semantic_fluency_scores, sentiment_scores, speed_scores
             ):
-                literal_score = self.get_literal_score(bert_score, levenshtein_score, ngram_score)
-                contextual_score = self.get_contextual_score(comet_score,
-                                                             semantic_adequacy_score, semantic_fluency_score)
-                composite_score = self.get_composite_score(literal_score, contextual_score,
-                                                           sentiment_score, speed_score)
+                literal_score = self.get_literal_score(bert_score, comet_score, levenshtein_score)
+                contextual_score = self.get_contextual_score(ngram_score, semantic_fluency_score, sentiment_score)
+                composite_score = self.get_composite_score(literal_score, contextual_score, speed_score)
                 if composite_score > 1:
                     composite_score = 1
                 elif composite_score < 0:
