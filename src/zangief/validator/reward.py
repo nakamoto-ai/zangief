@@ -8,9 +8,10 @@ from nltk.util import ngrams
 from typing import List
 from sentence_transformers import SentenceTransformer, util
 import torch
-from transformers import GPT2LMHeadModel, GPT2Tokenizer, pipeline
+from transformers import pipeline
 import Levenshtein
 from typing import List, Dict, Tuple, Any
+import string
 
 
 class Reward:
@@ -23,8 +24,6 @@ class Reward:
             model_type="bert-base-multilingual-cased", device=device
         )
         self.sem_adequacy_model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
-        # self.sem_fluency_model = GPT2LMHeadModel.from_pretrained('gpt2')
-        # self.sem_fluency_tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
         self.sentiment_pipeline = pipeline('sentiment-analysis')
 
     def get_bert_score(self, sources: List[str], targets: List[str]) -> List[float]:
@@ -61,6 +60,8 @@ class Reward:
     def get_ngram_score(self, sources: List[str], targets: List[str]) -> List[float]:
         scores = []
         for target, source in zip(targets, sources):
+            target = target.lower().translate(str.maketrans('', '', string.punctuation))
+            source = source.lower().translate(str.maketrans('', '', string.punctuation))
             word_count = len(target.split())
 
             if word_count == 1:
@@ -114,24 +115,6 @@ class Reward:
 
         perplexity = torch.exp(torch.stack(lls).sum() / end_loc)
         return perplexity.item()
-
-    # def get_semantic_fluency_score(self, sources: List[str], targets: List[str]) -> List[float]:
-    #     model = self.sem_fluency_model
-    #     tokenizer = self.sem_fluency_tokenizer
-    #
-    #     scores = []
-    #     for target, source in zip(targets, sources):
-    #         source_perplexity = self.calculate_perplexity(model, tokenizer, source)
-    #         target_perplexity = self.calculate_perplexity(model, tokenizer, target)
-    #
-    #         # Normalize target perplexity by source perplexity to account for complexity
-    #         normalized_fluency_score = target_perplexity / source_perplexity
-    #
-    #         # Transform to ensure the score is within [0, 1]
-    #         final_score = 1 / (1 + normalized_fluency_score)
-    #         scores.append(final_score)
-    #
-    #     return scores
 
     def get_sentiment_score(self, sources: List[str], targets: List[str]) -> List[float]:
         sentiment_pipeline = self.sentiment_pipeline
