@@ -22,7 +22,6 @@ class Reward:
         self.bert_model = BERTScorer(
             model_type="bert-base-multilingual-cased", device=device
         )
-        self.sem_adequacy_model = SentenceTransformer('paraphrase-MiniLM-L6-v2')
         self.sem_fluency_model = GPT2LMHeadModel.from_pretrained('gpt2')
         self.sem_fluency_tokenizer = GPT2Tokenizer.from_pretrained('gpt2')
         self.sentiment_pipeline = pipeline('sentiment-analysis')
