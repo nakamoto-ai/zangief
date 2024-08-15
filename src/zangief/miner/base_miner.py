@@ -12,11 +12,12 @@ from abc import abstractmethod
 class BaseMiner(Module):
 
     @endpoint
-    def score(self, bert: float, comet: float, composite: float):
+    def compute(self, bert: float, comet: float, composite: float):
         logger.info("Your Scores:\n")
         logger.info(f"BERT: {bert}")
         logger.info(f"COMET: {comet}")
         logger.info(f"Composite Score (50% BERT + 50% COMET): {composite}")
+        return {"answer": True}
 
     @endpoint
     def generate(self, prompt: str, source_language: str, target_language: str) -> dict[str, str]:

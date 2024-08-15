@@ -258,9 +258,10 @@ class TranslateValidator(Module):
         module_ip, module_port = self.split_ip_port(connection)
 
         if module_ip == "None" or module_port == "None" or module_ip is None or module_port is None:
-            return
+            return False
 
         try:
+            logger.info("Returning Score...")
             send_miner_score = asyncio.run(
                 client.call(
                     "score",
@@ -269,9 +270,11 @@ class TranslateValidator(Module):
                     timeout=self.call_timeout
                 )
             )
-            return
+            logger.info("Successfully returned score.")
+            return send_miner_score['answer']
         except Exception as e:
-            return
+            logger.info("Failed to return score.")
+            return False
 
     def get_miners_to_query(self, miners: list[dict[str, Any]]):
         current_weights = read_weight_file(self.weights_file)
@@ -380,7 +383,8 @@ class TranslateValidator(Module):
             send_miner_score = partial(self._return_miner_scores, full_score)
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-                executor.map(send_miner_score, [miners_to_query[i]])
+                rs = executor.map(send_miner_score, [miners_to_query[i]])
+                successes = [*rs]
 
         logger.debug("Miner prompt")
         logger.debug(miner_prompt)
