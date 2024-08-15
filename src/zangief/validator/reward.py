@@ -74,9 +74,10 @@ class Reward:
                     composite_score = 0
                 composite_scores.append(composite_score)
                 full = {
-                    'bert': bert_score,
-                    'comet': comet_score,
-                    'composite': composite_score
+                    'prompt': bert_score,
+                    'source_language': comet_score,
+                    'target_language': composite_score,
+                    'scores': True
                 }
                 fulls.append(full)
 
@@ -86,9 +87,10 @@ class Reward:
             if i in empty_indexes:
                 final_scores.insert(i, 0)
                 empty_full_score = {
-                    'bert': 0,
-                    'comet': 0,
-                    'composite': 0
+                    'prompt': 0,
+                    'source_language': 0,
+                    'target_language': 0,
+                    'scores': True
                 }
                 full_scores.insert(i, empty_full_score)
             else:

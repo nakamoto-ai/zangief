@@ -264,7 +264,7 @@ class TranslateValidator(Module):
             logger.info("Returning Score...")
             send_miner_score = asyncio.run(
                 client.call(
-                    "compute",
+                    "generate",
                     miner_key,
                     score,
                     timeout=self.call_timeout
