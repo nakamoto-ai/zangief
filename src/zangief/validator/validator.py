@@ -7,7 +7,7 @@ from functools import partial
 import numpy as np
 import random
 import argparse
-from typing import cast, Any
+from typing import cast, Any, Dict
 
 from communex.client import CommuneClient
 from communex.module.client import ModuleClient
