@@ -248,6 +248,31 @@ class TranslateValidator(Module):
             miner_answer = None
         return miner_answer
 
+    def _return_miner_scores(
+        self,
+        score: Dict[str, float],
+        miner_info: tuple[list[str], Ss58Address],
+    ):
+        connection = miner_info['address']
+        miner_key = miner_info['key']
+        module_ip, module_port = self.split_ip_port(connection)
+
+        if module_ip == "None" or module_port == "None" or module_ip is None or module_port is None:
+            return
+
+        try:
+            send_miner_score = asyncio.run(
+                client.call(
+                    "score",
+                    miner_key,
+                    score,
+                    timeout=self.call_timeout
+                )
+            )
+            return
+        except Exception as e:
+            return
+
     def get_miners_to_query(self, miners: list[dict[str, Any]]):
         current_weights = read_weight_file(self.weights_file)
         miners_to_query = []
@@ -349,7 +374,13 @@ class TranslateValidator(Module):
             it = executor.map(get_miner_prediction, miners_to_query)
             miner_answers = [*it]
 
-        scores = self.reward.get_scores(miner_prompt, target_language, miner_answers)
+        scores, full_scores = self.reward.get_scores(miner_prompt, target_language, miner_answers)
+
+        for i, full_score in enumerate(full_scores):
+            send_miner_score = partial(self._return_miner_scores, full_score)
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+                executor.map(send_miner_score, [miners_to_query[i]])
 
         logger.debug("Miner prompt")
         logger.debug(miner_prompt)

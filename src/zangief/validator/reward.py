@@ -59,6 +59,7 @@ class Reward:
                 empty_indexes.append(index)
 
         composite_scores = []
+        fulls = []
         if len(cleaned_targets) > 0:
             sources = [source] * len(cleaned_targets)
             bert_scores = self.get_bert_score(sources, cleaned_targets)
@@ -72,13 +73,28 @@ class Reward:
                 elif composite_score < 0:
                     composite_score = 0
                 composite_scores.append(composite_score)
+                full = {
+                    'bert': bert_score,
+                    'comet': comet_score,
+                    'composite': composite_score
+                }
+                fulls.append(full)
 
         final_scores = []
+        full_scores = []
         for i in range(0, len(targets)):
             if i in empty_indexes:
                 final_scores.insert(i, 0)
+                empty_full_score = {
+                    'bert': 0,
+                    'comet': 0,
+                    'composite': 0
+                }
+                full_scores.insert(i, empty_full_score)
             else:
                 score = composite_scores.pop(0)
+                full_score = full_scores.pop(0)
                 final_scores.insert(i, score)
+                full_scores.insert(i, full_score)
 
-        return final_scores
+        return final_scores, full_scores
