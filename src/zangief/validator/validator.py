@@ -435,7 +435,7 @@ class TranslateValidator(Module):
         while True:
             logger.info("Begin validator step ... ")
             asyncio.run(self.validate_step(self.netuid))
-
+            interval = 1
             logger.info(f"Sleeping for {interval} seconds ... ")
             time.sleep(interval)
 
