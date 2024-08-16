@@ -11,39 +11,32 @@ from abc import abstractmethod
 
 class BaseMiner(Module):
 
-    # @endpoint
-    # def compute(self, bert: float, comet: float, composite: float):
-    #     logger.info("Your Scores:\n")
-    #     logger.info(f"BERT: {bert}")
-    #     logger.info(f"COMET: {comet}")
-    #     logger.info(f"Composite Score (50% BERT + 50% COMET): {composite}")
-    #     return {"answer": True}
+    @endpoint
+    def score(self, bert: float, comet: float, composite: float):
+        logger.info("Your Scores:\n")
+        logger.info(f"BERT: {bert}")
+        logger.info(f"COMET: {comet}")
+        logger.info(f"Composite Score (50% BERT + 50% COMET): {composite}")
+        return {"answer": True}
 
     @endpoint
-    def generate(self, prompt: str, source_language: str, target_language: str, scores: bool = False) -> dict[str, str]:
-        if not scores:
-            start_time = time.time()
-            logger.info(f"Generating translation... ")
+    def generate(self, prompt: str, source_language: str, target_language: str) -> dict[str, str]:
+        start_time = time.time()
+        logger.info(f"Generating translation... ")
 
-            logger.info(f"Source ({source_language})")
-            logger.info(f"{prompt}")
+        logger.info(f"Source ({source_language})")
+        logger.info(f"{prompt}")
 
-            translation = self.generate_translation(prompt, source_language, target_language)
+        translation = self.generate_translation(prompt, source_language, target_language)
 
-            logger.info(f"Translation ({target_language})")
-            logger.info(translation)
+        logger.info(f"Translation ({target_language})")
+        logger.info(translation)
 
-            end_time = time.time()
-            execution_time = end_time - start_time
-            logger.info(f"Responded in {execution_time} seconds")
+        end_time = time.time()
+        execution_time = end_time - start_time
+        logger.info(f"Responded in {execution_time} seconds")
 
-            return {"answer": translation}
-        else:
-            logger.info("Your Scores:\n")
-            logger.info(f"BERT: {prompt}")
-            logger.info(f"COMET: {source_language}")
-            logger.info(f"Composite Score (50% BERT + 50% COMET): {target_language}")
-            return {"answer": True}
+        return {"answer": translation}
 
     @abstractmethod
     def generate_translation(self, prompt: str, source_language: str, target_language: str):

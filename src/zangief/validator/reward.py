@@ -52,10 +52,9 @@ class Reward:
         cleaned_targets = []
         empty_indexes = []
         empty_full_score = {
-            'prompt': '0.0',
-            'source_language': '0.0',
-            'target_language': '0.0',
-            'scores': True
+            'bert': '0.0',
+            'comet': '0.0',
+            'composite': '0.0'
         }
         full_scores = [empty_full_score for _ in range(len(targets))]
 
@@ -81,10 +80,9 @@ class Reward:
                     composite_score = 0
                 composite_scores.append(composite_score)
                 full = {
-                    'prompt': str(bert_score),
-                    'source_language': str(comet_score),
-                    'target_language': str(composite_score),
-                    'scores': True
+                    'bert': str(bert_score),
+                    'comet': str(comet_score),
+                    'composite': str(composite_score)
                 }
                 fulls.append(full)
 
