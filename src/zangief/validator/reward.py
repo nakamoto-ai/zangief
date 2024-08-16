@@ -95,7 +95,6 @@ class Reward:
                 full_scores.insert(i, empty_full_score)
             else:
                 score = composite_scores.pop(0)
-                full_score = full_scores.pop(0)
                 final_scores.insert(i, score)
                 full_scores.insert(i, full_score)
 
