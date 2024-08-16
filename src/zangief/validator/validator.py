@@ -260,10 +260,12 @@ class TranslateValidator(Module):
         if module_ip == "None" or module_port == "None" or module_ip is None or module_port is None:
             return False
 
+        client = ModuleClient(module_ip, int(module_port), self.key)
+
         try:
             logger.info("Returning Score...")
             send_miner_score = asyncio.run(
-                self.client.call(
+                client.call(
                     "generate",
                     miner_key,
                     score,
