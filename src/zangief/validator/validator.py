@@ -269,7 +269,7 @@ class TranslateValidator(Module):
                     "generate",
                     miner_key,
                     score,
-                    timeout=self.call_timeout
+                    timeout=10
                 )
             )
             logger.info("Successfully returned score.")

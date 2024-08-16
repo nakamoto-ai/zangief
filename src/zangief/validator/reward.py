@@ -92,10 +92,10 @@ class Reward:
                     'target_language': '0.0',
                     'scores': True
                 }
-                full_scores.insert(i, empty_full_score)
+                full_scores.append(empty_full_score)
             else:
                 score = composite_scores.pop(0)
                 final_scores.insert(i, score)
-                full_scores.insert(i, fulls[i])
+                full_scores.append(fulls[i])
 
         return final_scores, full_scores
