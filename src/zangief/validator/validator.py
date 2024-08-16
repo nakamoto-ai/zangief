@@ -263,7 +263,6 @@ class TranslateValidator(Module):
         client = ModuleClient(module_ip, int(module_port), self.key)
 
         try:
-            logger.info("Returning Score...")
             send_miner_score = asyncio.run(
                 client.call(
                     "score",
@@ -272,10 +271,8 @@ class TranslateValidator(Module):
                     timeout=10
                 )
             )
-            logger.info("Successfully returned score.")
             return send_miner_score['answer']
         except Exception as e:
-            logger.info(f"Failed to return score: {e}")
             return False
 
     def get_miners_to_query(self, miners: list[dict[str, Any]]):
@@ -435,7 +432,6 @@ class TranslateValidator(Module):
         while True:
             logger.info("Begin validator step ... ")
             asyncio.run(self.validate_step(self.netuid))
-            interval = 1
             logger.info(f"Sleeping for {interval} seconds ... ")
             time.sleep(interval)
 
@@ -496,11 +492,9 @@ if __name__ == '__main__':
 
     # Load config, and get the values.
     validator_config = ValidatorConfig(env_path=args.env, ignore_config_file=args.ignore_env_file)
-    # testnet = validator_config.get_testnet()
-    testnet = True
+    testnet = validator_config.get_testnet()
     keyname = validator_config.get_key_name()
-    # netuid = validator_config.get_netuid()
-    netuid = 23
+    netuid = validator_config.get_netuid()
     call_timeout = validator_config.get_validator_call_timeout()
     interval = validator_config.get_validator_interval()
 
