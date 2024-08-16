@@ -382,11 +382,11 @@ class TranslateValidator(Module):
         scores, full_scores = self.reward.get_scores(miner_prompt, target_language, miner_answers)
 
         for i, full_score in enumerate(full_scores):
-            send_miner_score = self._return_miner_scores(full_score, miners_to_query[i])
+            send_miner_score = partial(self._return_miner_scores, full_score)
 
-            # with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-            #     rs = executor.map(send_miner_score, [miners_to_query[i]])
-            #     successes = [*rs]
+            with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+                rs = executor.map(send_miner_score, [miners_to_query[i]])
+                successes = [*rs]
 
         logger.debug("Miner prompt")
         logger.debug(miner_prompt)
