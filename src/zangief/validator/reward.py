@@ -51,6 +51,13 @@ class Reward:
     def get_scores(self, source, target_language, targets):
         cleaned_targets = []
         empty_indexes = []
+        empty_full_score = {
+            'prompt': '0.0',
+            'source_language': '0.0',
+            'target_language': '0.0',
+            'scores': True
+        }
+        full_scores = [empty_full_score for _ in range(len(targets))]
 
         for index, value in enumerate(targets):
             if self.is_valid_response(target_language, value):
@@ -82,20 +89,14 @@ class Reward:
                 fulls.append(full)
 
         final_scores = []
-        full_scores = []
+        j = 0
         for i in range(0, len(targets)):
             if i in empty_indexes:
                 final_scores.insert(i, 0)
-                empty_full_score = {
-                    'prompt': '0.0',
-                    'source_language': '0.0',
-                    'target_language': '0.0',
-                    'scores': True
-                }
-                full_scores.append(empty_full_score)
             else:
                 score = composite_scores.pop(0)
                 final_scores.insert(i, score)
-                full_scores.append(fulls[i])
+                full_scores[i] = fulls[j]
+                j += 1
 
         return final_scores, full_scores
