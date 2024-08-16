@@ -273,7 +273,7 @@ class TranslateValidator(Module):
             logger.info("Successfully returned score.")
             return send_miner_score['answer']
         except Exception as e:
-            logger.info("Failed to return score.")
+            logger.info(f"Failed to return score: {e}")
             return False
 
     def get_miners_to_query(self, miners: list[dict[str, Any]]):
