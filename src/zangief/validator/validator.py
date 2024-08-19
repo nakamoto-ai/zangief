@@ -7,7 +7,7 @@ from functools import partial
 import numpy as np
 import random
 import argparse
-from typing import cast, Any
+from typing import cast, Any, Dict
 
 from communex.client import CommuneClient
 from communex.module.client import ModuleClient
@@ -248,6 +248,33 @@ class TranslateValidator(Module):
             miner_answer = None
         return miner_answer
 
+    def _return_miner_scores(
+        self,
+        score: Dict[str, float],
+        miner_info: tuple[list[str], Ss58Address],
+    ):
+        connection = miner_info['address']
+        miner_key = miner_info['key']
+        module_ip, module_port = self.split_ip_port(connection)
+
+        if module_ip == "None" or module_port == "None" or module_ip is None or module_port is None:
+            return False
+
+        client = ModuleClient(module_ip, int(module_port), self.key)
+
+        try:
+            send_miner_score = asyncio.run(
+                client.call(
+                    "score",
+                    miner_key,
+                    score,
+                    timeout=10
+                )
+            )
+            return send_miner_score['answer']
+        except Exception as e:
+            return False
+
     def get_miners_to_query(self, miners: list[dict[str, Any]]):
         current_weights = read_weight_file(self.weights_file)
         miners_to_query = []
@@ -349,7 +376,14 @@ class TranslateValidator(Module):
             it = executor.map(get_miner_prediction, miners_to_query)
             miner_answers = [*it]
 
-        scores = self.reward.get_scores(miner_prompt, target_language, miner_answers)
+        scores, full_scores = self.reward.get_scores(miner_prompt, target_language, miner_answers)
+
+        for i, full_score in enumerate(full_scores):
+            send_miner_score = partial(self._return_miner_scores, full_score)
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+                rs = executor.map(send_miner_score, [miners_to_query[i]])
+                successes = [*rs]
 
         logger.debug("Miner prompt")
         logger.debug(miner_prompt)
@@ -398,7 +432,6 @@ class TranslateValidator(Module):
         while True:
             logger.info("Begin validator step ... ")
             asyncio.run(self.validate_step(self.netuid))
-
             logger.info(f"Sleeping for {interval} seconds ... ")
             time.sleep(interval)
 
