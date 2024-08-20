@@ -497,6 +497,12 @@ if __name__ == '__main__':
     netuid = validator_config.get_netuid()
     call_timeout = validator_config.get_validator_call_timeout()
     interval = validator_config.get_validator_interval()
+    key_password = validator_config.get_key_password()
+
+    if key_password is not None:
+        key = classic_load_key(keyname, password=key_password)
+    else:
+        key = classic_load_key(keyname)
 
     if testnet:
         logger.info("Connecting to TEST network ... ")
@@ -504,7 +510,7 @@ if __name__ == '__main__':
         logger.info("Connecting to Main network ... ")
 
     validator = TranslateValidator(
-        key=classic_load_key(keyname),
+        key=key,
         netuid=netuid,
         client=CommuneClient(get_node_url(use_testnet=testnet)),
         call_timeout=call_timeout,

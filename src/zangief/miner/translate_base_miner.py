@@ -68,7 +68,11 @@ class BaseMiner(Module):
 
     def start_miner_server(self, keyname, host, port) -> None:
         config: Config = self.get_config()
-        key: Keypair = classic_load_key(name=str(keyname))
+        key_password = config.get_value('key_password')
+        if key_password is None:
+            key: Keypair = classic_load_key(name=str(keyname))
+        else:
+            key: Keypair = classic_load_key(name=str(keyname), password=key_password)
 
         refill_rate: float = 1 / 1000
         use_testnet: bool = config.get_value(option="isTestnet") == "1"
