@@ -492,14 +492,10 @@ if __name__ == '__main__':
 
     # Load config, and get the values.
     validator_config = ValidatorConfig(env_path=args.env, ignore_config_file=args.ignore_env_file)
-    """
-    NOTE: change config values back
-    """
-    # testnet = validator_config.get_testnet()
-    testnet = True
+
+    testnet = validator_config.get_testnet()
     keyname = validator_config.get_key_name()
-    # netuid = validator_config.get_netuid()
-    netuid = 23
+    netuid = validator_config.get_netuid()
     call_timeout = validator_config.get_validator_call_timeout()
     interval = validator_config.get_validator_interval()
     key_password = validator_config.get_key_password()
