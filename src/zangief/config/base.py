@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 ENV_KEY_NAME = "KEY_NAME"
 ENV_TESTNET = "TESTNET"
 ENV_NETUID = "NETUID"
+ENV_KEY_PASSWORD = "KEY_PASSWORD"
 
 
 class BaseConfig:
@@ -27,6 +28,8 @@ class BaseConfig:
             Retrieves the TESTNET environment variable as a boolean.
         get_netuid() -> int:
             Retrieves the NETUID environment variable as an integer.
+        get_key_password() -> str:
+            Retrieves the KEY_PASSWORD environment variable as a string.
     """
 
     def __init__(self, env_path='.env', ignore_config_file=False):
@@ -113,3 +116,20 @@ class BaseConfig:
             raise ValueError(f"The environment variable '{ENV_NETUID}' should only contain digits.")
 
         return int(netuid)
+
+    def get_key_password(self) -> str | None:
+        """
+
+        Retrieves the KEY_PASSWORD environment variable as a string.
+
+        Returns
+            str:
+                The value of the KEY_PASSWORD environment variable, or None if not set.
+
+        """
+        key_password = self._get(ENV_KEY_PASSWORD, None)
+
+        if key_password is not None:
+            key_password = str(key_password)
+
+        return key_password

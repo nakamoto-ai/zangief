@@ -44,7 +44,11 @@ class BaseMiner(Module):
 
     @staticmethod
     def start_miner_server(miner):
-        key = classic_load_key(miner.config.get_value("keyfile"))
+        key_password = miner.config.get_value("key_password")
+        if key_password is None:
+            key = classic_load_key(miner.config.get_value("keyfile"))
+        else:
+            key = classic_load_key(miner.config.get_value("keyfile"), password=key_password)
         url = miner.config.get_value("url")
         parsed_url = urlparse(url)
 

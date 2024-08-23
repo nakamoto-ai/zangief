@@ -10,6 +10,7 @@ class Config:
     top_k: str
     no_repeat_ngram_size: str
     num_beams: str
+    key_password: str
 
     def __init__(self, config_file):
         if config_file is None:
