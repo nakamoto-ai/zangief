@@ -28,7 +28,6 @@ from prompt_datasets.cc_100 import CC100
 
 from zangief.config.validator import ValidatorConfig
 
-
 logger.add("logs/log_{time:YYYY-MM-DD}.log", rotation="1 day", level="INFO")
 
 IP_REGEX = re.compile(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+")
@@ -119,12 +118,12 @@ class TranslateValidator(Module):
     """
 
     def __init__(
-        self,
-        key: Keypair,
-        netuid: int,
-        client: CommuneClient,
-        call_timeout: int = 30,
-        use_testnet: bool = False,
+            self,
+            key: Keypair,
+            netuid: int,
+            client: CommuneClient,
+            call_timeout: int = 30,
+            use_testnet: bool = False,
     ) -> None:
         super().__init__()
         self.client = client
@@ -141,77 +140,12 @@ class TranslateValidator(Module):
         write_weight_file(self.weights_file, {})
 
         self.reward = Reward()
-        self.all_languages = [
-            "ar",
-            "bn",
-            "cs",
-            "de",
-            "el",
-            "en",
-            "es",
-            "fa",
-            "fr",
-            "he",
-            "hi",
-            "hu",
-            "it",
-            "ja",
-            "jv",
-            "ko",
-            "my",
-            "nl",
-            "pa",
-            "pl",
-            "pt",
-            "ro",
-            "ru",
-            "sv",
-            "ta",
-            "te",
-            "th",
-            "tr",
-            "uk",
-            "ur",
-            "vi",
-            "zh",
-        ]
-        self.languages = random.sample(self.all_languages, 10)
         cc_100 = CC100()
-        self.datasets = {l: [cc_100] for l in self.all_languages}
-        # self.datasets = {
-        #     "ar": [cc_100],
-        #     "bn": [cc_100],
-        #     "cs": [cc_100],
-        #     "de": [cc_100],
-        #     "el": [cc_100],
-        #     "en": [cc_100],
-        #     "es": [cc_100],
-        #     "fa": [cc_100],
-        #     "fr": [cc_100],
-        #     "he": [cc_100],
-        #     "hi": [cc_100],
-        #     "hu": [cc_100],
-        #     "it": [cc_100],
-        #     "ja": [cc_100],
-        #     "jv": [cc_100],
-        #     "ko": [cc_100],
-        #     "my": [cc_100],
-        #     "nl": [cc_100],
-        #     "pa": [cc_100],
-        #     "pl": [cc_100],
-        #     "pt": [cc_100],
-        #     "ro": [cc_100],
-        #     "ru": [cc_100],
-        #     "sv": [cc_100],
-        #     "ta": [cc_100],
-        #     "te": [cc_100],
-        #     "th": [cc_100],
-        #     "tr": [cc_100],
-        #     "uk": [cc_100],
-        #     "ur": [cc_100],
-        #     "vi": [cc_100],
-        #     "zh": [cc_100],
-        # }
+        self.languages = cc_100.selected_languages
+        self.datasets = {
+            l: [cc_100] for
+            l in self.languages
+        }
 
     def get_addresses(self, client: CommuneClient, netuid: int) -> dict[int, str]:
         """
@@ -243,9 +177,9 @@ class TranslateValidator(Module):
             return None, None
 
     def _get_miner_prediction(
-        self,
-        prompt: str,
-        miner_info: tuple[list[str], Ss58Address],
+            self,
+            prompt: str,
+            miner_info: tuple[list[str], Ss58Address],
     ) -> str | None:
         """
         Prompt a miner module to generate an answer to the given question.
@@ -283,9 +217,9 @@ class TranslateValidator(Module):
             return ""
 
     def _return_miner_scores(
-        self,
-        score: Dict[str, float],
-        miner_info: tuple[list[str], Ss58Address],
+            self,
+            score: Dict[str, float],
+            miner_info: tuple[list[str], Ss58Address],
     ):
         connection = miner_info['address']
         miner_key = miner_info['key']
@@ -368,7 +302,7 @@ class TranslateValidator(Module):
         return source_text, source_language, target_language
 
     async def validate_step(
-        self, netuid: int
+            self, netuid: int
     ) -> None:
         """
         Perform a validation step.
