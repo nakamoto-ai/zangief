@@ -140,6 +140,11 @@ class TranslateValidator(Module):
         write_weight_file(self.weights_file, {})
 
         self.reward = Reward()
+        self.languages = []
+        self.datasets = {}
+        self.load_languages()
+
+    def load_languages(self):
         cc_100 = CC100()
         self.languages = cc_100.selected_languages
         self.datasets = {
@@ -405,6 +410,7 @@ class TranslateValidator(Module):
             logger.info("SETTING WEIGHTS")
             self.set_weights(s_dict)
             write_weight_file(self.weights_file, {})
+            self.load_languages()
 
     def validation_loop(self, interval: int = 20) -> None:
         while True:
