@@ -118,12 +118,12 @@ class TranslateValidator(Module):
     """
 
     def __init__(
-            self,
-            key: Keypair,
-            netuid: int,
-            client: CommuneClient,
-            call_timeout: int = 30,
-            use_testnet: bool = False,
+        self,
+        key: Keypair,
+        netuid: int,
+        client: CommuneClient,
+        call_timeout: int = 30,
+        use_testnet: bool = False,
     ) -> None:
         super().__init__()
         self.client = client
@@ -182,9 +182,9 @@ class TranslateValidator(Module):
             return None, None
 
     def _get_miner_prediction(
-            self,
-            prompt: str,
-            miner_info: tuple[list[str], Ss58Address],
+        self,
+        prompt: str,
+        miner_info: tuple[list[str], Ss58Address],
     ) -> str | None:
         """
         Prompt a miner module to generate an answer to the given question.
@@ -307,7 +307,7 @@ class TranslateValidator(Module):
         return source_text, source_language, target_language
 
     async def validate_step(
-            self, netuid: int
+        self, netuid: int
     ) -> None:
         """
         Perform a validation step.
