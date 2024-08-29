@@ -174,7 +174,6 @@ class TranslateValidator(Module):
             "ur",
             "vi",
             "zh",
-            "zht",
         ]
         cc_100 = CC100()
         self.datasets = {
@@ -210,7 +209,6 @@ class TranslateValidator(Module):
             "ur": [cc_100],
             "vi": [cc_100],
             "zh": [cc_100],
-            "zht": [cc_100],
         }
 
     def get_addresses(self, client: CommuneClient, netuid: int) -> dict[int, str]:

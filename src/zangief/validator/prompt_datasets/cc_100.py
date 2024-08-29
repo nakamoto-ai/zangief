@@ -47,7 +47,6 @@ class CC100(BaseDataset):
             "ur": 120_000,
             "vi": 120_000,
             "zh": 120_000,
-            "zht": 120_000,
         }
         language_alias = {"zh": "zh-Hans", "zht": "zh-Hant"}
         self.datasets = {}
