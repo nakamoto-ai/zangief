@@ -222,9 +222,9 @@ class TranslateValidator(Module):
             return ""
 
     def _return_miner_scores(
-            self,
-            score: Dict[str, float],
-            miner_info: tuple[list[str], Ss58Address],
+        self,
+        score: Dict[str, float],
+        miner_info: tuple[list[str], Ss58Address],
     ):
         connection = miner_info['address']
         miner_key = miner_info['key']
