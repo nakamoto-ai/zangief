@@ -351,21 +351,7 @@ class TranslateValidator(Module):
             it = executor.map(get_miner_prediction, miners_to_query)
             miner_answers = [*it]
 
-        """
-        NOTE: Remove miner answers debug log
-        """
-        logger.debug("Miner Answers")
-        logger.debug(miner_answers)
-
         scores, full_scores = self.reward.get_scores(miner_prompt, target_language, miner_answers)
-
-        """
-        NOTE: Remove scores debug log
-        """
-        logger.debug("Scores")
-        logger.debug(scores)
-        logger.debug("Full Scores")
-        logger.debug(full_scores)
 
         for i, full_score in enumerate(full_scores):
             send_miner_score = partial(self._return_miner_scores, full_score)
@@ -423,10 +409,7 @@ class TranslateValidator(Module):
             logger.info("Begin validator step ... ")
             asyncio.run(self.validate_step(self.netuid))
             logger.info(f"Sleeping for {interval} seconds ... ")
-            """
-            NOTE: add sleep interval back in
-            """
-            # time.sleep(interval)
+            time.sleep(interval)
 
     def set_weights(self, s_dict):
         """
