@@ -141,7 +141,7 @@ class TranslateValidator(Module):
         write_weight_file(self.weights_file, {})
 
         self.reward = Reward()
-        self.languages = [
+        self.all_languages = [
             "ar",
             "bn",
             "cs",
@@ -175,41 +175,43 @@ class TranslateValidator(Module):
             "vi",
             "zh",
         ]
+        self.languages = random.sample(self.all_languages, 10)
         cc_100 = CC100()
-        self.datasets = {
-            "ar": [cc_100],
-            "bn": [cc_100],
-            "cs": [cc_100],
-            "de": [cc_100],
-            "el": [cc_100],
-            "en": [cc_100],
-            "es": [cc_100],
-            "fa": [cc_100],
-            "fr": [cc_100],
-            "he": [cc_100],
-            "hi": [cc_100],
-            "hu": [cc_100],
-            "it": [cc_100],
-            "ja": [cc_100],
-            "jv": [cc_100],
-            "ko": [cc_100],
-            "my": [cc_100],
-            "nl": [cc_100],
-            "pa": [cc_100],
-            "pl": [cc_100],
-            "pt": [cc_100],
-            "ro": [cc_100],
-            "ru": [cc_100],
-            "sv": [cc_100],
-            "ta": [cc_100],
-            "te": [cc_100],
-            "th": [cc_100],
-            "tr": [cc_100],
-            "uk": [cc_100],
-            "ur": [cc_100],
-            "vi": [cc_100],
-            "zh": [cc_100],
-        }
+        self.datasets = {l: [cc_100] for l in self.all_languages}
+        # self.datasets = {
+        #     "ar": [cc_100],
+        #     "bn": [cc_100],
+        #     "cs": [cc_100],
+        #     "de": [cc_100],
+        #     "el": [cc_100],
+        #     "en": [cc_100],
+        #     "es": [cc_100],
+        #     "fa": [cc_100],
+        #     "fr": [cc_100],
+        #     "he": [cc_100],
+        #     "hi": [cc_100],
+        #     "hu": [cc_100],
+        #     "it": [cc_100],
+        #     "ja": [cc_100],
+        #     "jv": [cc_100],
+        #     "ko": [cc_100],
+        #     "my": [cc_100],
+        #     "nl": [cc_100],
+        #     "pa": [cc_100],
+        #     "pl": [cc_100],
+        #     "pt": [cc_100],
+        #     "ro": [cc_100],
+        #     "ru": [cc_100],
+        #     "sv": [cc_100],
+        #     "ta": [cc_100],
+        #     "te": [cc_100],
+        #     "th": [cc_100],
+        #     "tr": [cc_100],
+        #     "uk": [cc_100],
+        #     "ur": [cc_100],
+        #     "vi": [cc_100],
+        #     "zh": [cc_100],
+        # }
 
     def get_addresses(self, client: CommuneClient, netuid: int) -> dict[int, str]:
         """
@@ -402,13 +404,23 @@ class TranslateValidator(Module):
         logger.debug(miner_prompt)
 
         prompt = (miner_prompt, source_language, target_language)
+        logger.debug("Creating miner prediction partial...")
         get_miner_prediction = partial(self._get_miner_prediction, prompt)
 
+        logger.debug("Prompting miners...")
         with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
             it = executor.map(get_miner_prediction, miners_to_query)
             miner_answers = [*it]
 
+        logger.debug("Miner Answers")
+        logger.debug(miner_answers)
+
         scores, full_scores = self.reward.get_scores(miner_prompt, target_language, miner_answers)
+
+        logger.debug("Scores")
+        logger.debug(scores)
+        logger.debug("Full Scores")
+        logger.debug(full_scores)
 
         for i, full_score in enumerate(full_scores):
             send_miner_score = partial(self._return_miner_scores, full_score)
