@@ -155,12 +155,17 @@ class ComxClient(ComxInterface):
         else:
             return classic_load_key(name=name)
 
+    def module_call(
+        self, host: str, port: int, key: Keypair, fn: str, target_key: Ss58Address, params: Any = {}, timeout: int = 16
+    ):
+        modx_client = ModXClient(host=host, port=port, key=key)
+        return modx_client.call(fn=fn, target_key=target_key, params=params, timeout=timeout)
+
 
 class ModXClient(ModClientInterface):
 
     def __init__(self, host: str, port: int, key: Keypair):
         self.client = ModuleClient(host=host, port=port, key=key)
-        self.asyncio_client = AsyncIOClient()
 
     def call(
         self, fn: str, target_key: Ss58Address, params: Any = {}, timeout: int = 16
@@ -172,23 +177,10 @@ class ModXClient(ModClientInterface):
             params: dict of values to be sent to module
             timeout: wait time before connection attempt stops
         """
-        try:
-            module_response = self.asyncio_client.run(
-                self.client.call(
-                    fn=fn,
-                    target_key=target_key,
-                    params=params,
-                    timeout=timeout
-                )
-            )
-            return module_response
-        except Exception as e:
-            logger.error(f"Module Client Call Exception: {e}")
-            return {}
-
-
-class AsyncIOClient(AsyncIOInterface):
-    async def run(self, main, *args, debug=None):
-        """Run the provided coroutine using asyncio.run."""
-        return await asyncio.run(main=main, *args, debug=debug)
+        return self.client.call(
+            fn=fn,
+            target_key=target_key,
+            params=params,
+            timeout=timeout
+        )
 
