@@ -7,7 +7,7 @@ from communex.module.client import ModuleClient
 from communex.types import Ss58Address
 
 import asyncio
-from .interface import ComxInterface, ModClientInterface, AsyncIOInterface
+from .interface import ComxInterface, ModClientInterface
 from loguru import logger
 import random
 import time
@@ -156,8 +156,25 @@ class ComxClient(ComxInterface):
             return classic_load_key(name=name)
 
     def module_call(
-        self, host: str, port: int, key: Keypair, fn: str, target_key: Ss58Address, params: Any = {}, timeout: int = 16
+        self,
+        host: str,
+        port: int,
+        key: Keypair,
+        fn: str,
+        target_key: Ss58Address,
+        params: Any = {},
+        timeout: int = 16
     ):
+        """
+        Args:
+            host: string ip of module
+            port: integer port of module
+            key: miner module keypair object
+            fn: miner module endpoint name
+            target_key: ss58 address of miner module
+            params: values to be sent to miner module, probably dict
+            timeout: int value for time allowed before stopping connection attempt
+        """
         modx_client = ModXClient(host=host, port=port, key=key)
         return modx_client.call(fn=fn, target_key=target_key, params=params, timeout=timeout)
 

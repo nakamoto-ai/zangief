@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+from communex.client import Keypair
 from communex.types import SubnetParamsWithEmission, ModuleInfoWithOptionalBalance, Ss58Address
 from communex._common import ComxSettings
 from typing import Any
@@ -105,6 +106,22 @@ class ComxInterface(ABC):
         """
         pass
 
+    @abstractmethod
+    def module_call(
+        self,
+        host: str,
+        port: int,
+        key: Keypair,
+        fn: str,
+        target_key: Ss58Address,
+        params: Any = {},
+        timeout: int = 16
+    ):
+        """
+        Custom call that combines the creation of 'ModuleClient' and the client.call and receives input params for both
+        """
+        pass
+
 
 class ModClientInterface(ABC):
 
@@ -123,15 +140,5 @@ class ModClientInterface(ABC):
     ):
         """
         Creates connection object with miner module
-        """
-        pass
-
-
-class AsyncIOInterface(ABC):
-
-    @abstractmethod
-    async def run(self, main, *, debug=None):
-        """
-        Run the provided coroutine called 'main'
         """
         pass
