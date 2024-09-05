@@ -1,3 +1,5 @@
+from abc import abstractmethod
+
 from communex.client import CommuneClient, Keypair
 from communex.compat.key import classic_load_key
 from communex.types import SubnetParamsWithEmission, ModuleInfoWithOptionalBalance
@@ -6,7 +8,6 @@ from communex._common import get_node_url, ComxSettings
 from communex.module.client import ModuleClient
 from communex.types import Ss58Address
 
-import asyncio
 from .interface import ComxInterface, ModClientInterface
 from loguru import logger
 import random
@@ -128,10 +129,8 @@ class ComxClient(ComxInterface):
             logger.error(f"WARNING: Failed to set weights with exception: {e}. Will retry.")
             sleepy_time = random.uniform(1, 2)
             time.sleep(sleepy_time)
-            # TODO: Remove need to create new commune client every retry
-            self.client = CommuneClient(get_node_url(use_testnet=use_testnet))
-            self.client.vote(key=key, uids=uids, weights=weights, netuid=netuid)
 
+    @abstractmethod
     def get_node_url(
         self, comx_settings: ComxSettings | None = None, *args, use_testnet: bool = False
     ) -> str:
@@ -142,6 +141,7 @@ class ComxClient(ComxInterface):
         """
         return get_node_url(comx_settings=comx_settings, *args, use_testnet=use_testnet)
 
+    @abstractmethod
     def classic_load_key(
         self, name: str, password: str | None = None
     ) -> Keypair:
@@ -154,6 +154,22 @@ class ComxClient(ComxInterface):
             return classic_load_key(name=name, password=password)
         else:
             return classic_load_key(name=name)
+
+    def query_map_key(self, netuid: int = 0, extract_value: bool = False) -> dict[int, Ss58Address]:
+        return self.client.query_map_key(netuid=netuid, extract_value=extract_value)
+
+    def retry_vote(
+        self,
+        key: Keypair,
+        uids: list[int],
+        weights: list[int],
+        netuid: int = 0,
+        use_testnet: bool = False,
+        comx_settings: ComxSettings | None = None,
+        *args
+    ):
+        self.client = CommuneClient(self.get_node_url(use_testnet=use_testnet, *args, comx_settings=comx_settings))
+        self.vote(key=key, uids=uids, weights=weights, netuid=netuid, use_testnet=use_testnet)
 
     def module_call(
         self,
