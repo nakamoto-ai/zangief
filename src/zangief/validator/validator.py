@@ -187,14 +187,17 @@ class TranslateValidator(Module):
         if host == "None" or port == "None" or host is None or port is None:
             return ""
 
-        fn = "generate"
-        target_key = miner_key
-        params = {"prompt": question, "source_language": source_language, "target_language": target_language}
+        endpoint = "generate"
+        params = {
+            "prompt": question,
+            "source_language": source_language,
+            "target_language": target_language
+        }
 
         try:
             miner_answer = asyncio.run(
-                self.client.module_call(host=str(host), port=int(port), key=self.key, fn=fn,
-                                        target_key=target_key, params=params, timeout=self.call_timeout)
+                self.client.module_call(host=str(host), port=int(port), key=self.key, fn=endpoint,
+                                        target_key=miner_key, params=params, timeout=self.call_timeout)
             )
             miner_answer = miner_answer["answer"]
             return miner_answer
@@ -214,15 +217,13 @@ class TranslateValidator(Module):
         if host == "None" or port == "None" or host is None or port is None:
             return False
 
-        fn = "score"
-        target_key = miner_key
-        params = score
+        endpoint = "score"
         timeout = 10
 
         try:
             send_miner_score = asyncio.run(
-                self.client.module_call(host=str(host), port=int(port), key=self.key, fn=fn,
-                                        target_key=target_key, params=params, timeout=timeout)
+                self.client.module_call(host=str(host), port=int(port), key=self.key, fn=endpoint,
+                                        target_key=miner_key, params=score, timeout=timeout)
             )
             return send_miner_score['answer']
         except Exception as e:
