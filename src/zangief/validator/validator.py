@@ -455,9 +455,9 @@ if __name__ == '__main__':
     key_password = validator_config.get_key_password()
 
     if key_password is not None:
-        key = ComxClient.classic_load_key(keyname, password=key_password)
+        key = ComxClient.classic_load_key(name=keyname, password=key_password)
     else:
-        key = ComxClient.classic_load_key(keyname)
+        key = ComxClient.classic_load_key(name=keyname)
 
     if testnet:
         logger.info("Connecting to TEST network ... ")
