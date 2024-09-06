@@ -173,7 +173,9 @@ class ComxClient(ComxInterface):
 
     def module_call(
         self,
-        mod_client: ModuleClient,
+        host: str,
+        port: int,
+        key: Keypair,
         fn: str,
         target_key: Ss58Address,
         params: Any = {},
@@ -181,37 +183,37 @@ class ComxClient(ComxInterface):
     ):
         """
         Args:
-            mod_client: ModuleClient of miner being connected to
+            host: string ip of module
+            port: integer port of module
+            key: miner module keypair object
             fn: miner module endpoint name
             target_key: ss58 address of miner module
             params: values to be sent to miner module, probably dict
             timeout: int value for time allowed before stopping connection attempt
         """
-        return mod_client.call(fn=fn, target_key=target_key, params=params, timeout=timeout)
+        modx_client = ModXClient(host=host, port=port, key=key)
+        return modx_client.call(fn=fn, target_key=target_key, params=params, timeout=timeout)
 
 
-# class ModXClient(ModClientInterface):
-#
-#     # def __init__(self, host: str, port: int, key: Keypair):
-#     #     self.client = ModuleClient(host=host, port=port, key=key)
-#
-#     def __init__(self, client: ModuleClient):
-#         self.client = client
-#
-#     def call(
-#         self, fn: str, target_key: Ss58Address, params: Any = {}, timeout: int = 16
-#     ) -> Any:
-#         """
-#         Args:
-#             fn: str module endpoint name
-#             target_key: str ss58 address of module
-#             params: dict of values to be sent to module
-#             timeout: wait time before connection attempt stops
-#         """
-#         return self.client.call(
-#             fn=fn,
-#             target_key=target_key,
-#             params=params,
-#             timeout=timeout
-#         )
+class ModXClient(ModClientInterface):
+
+    def __init__(self, host: str, port: int, key: Keypair):
+        self.client = ModuleClient(host=host, port=port, key=key)
+
+    def call(
+        self, fn: str, target_key: Ss58Address, params: Any = {}, timeout: int = 16
+    ) -> Any:
+        """
+        Args:
+            fn: str module endpoint name
+            target_key: str ss58 address of module
+            params: dict of values to be sent to module
+            timeout: wait time before connection attempt stops
+        """
+        return self.client.call(
+            fn=fn,
+            target_key=target_key,
+            params=params,
+            timeout=timeout
+        )
 

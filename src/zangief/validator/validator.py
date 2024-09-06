@@ -9,8 +9,6 @@ import random
 import argparse
 from typing import cast, Any, Dict
 
-from communex.module.client import ModuleClient
-
 from zangief.commune.comx import ComxClient
 
 from communex.client import CommuneClient
@@ -195,12 +193,11 @@ class TranslateValidator(Module):
             "source_language": source_language,
             "target_language": target_language
         }
-        mod_client = ModuleClient(host=str(host), port=int(port), key=self.key)
 
         try:
             miner_answer = asyncio.run(
-                self.client.module_call(mod_client=mod_client, fn=endpoint, target_key=miner_key,
-                                        params=params, timeout=self.call_timeout)
+                self.client.module_call(host=str(host), port=int(port), key=self.key, fn=endpoint,
+                                        target_key=miner_key, params=params, timeout=self.call_timeout)
             )
             miner_answer = miner_answer["answer"]
             return miner_answer
@@ -222,12 +219,11 @@ class TranslateValidator(Module):
 
         endpoint = "score"
         timeout = 10
-        mod_client = ModuleClient(host=str(host), port=int(port), key=self.key)
 
         try:
             send_miner_score = asyncio.run(
-                self.client.module_call(mod_client=mod_client, fn=endpoint, target_key=miner_key,
-                                        params=score, timeout=timeout)
+                self.client.module_call(host=str(host), port=int(port), key=self.key, fn=endpoint,
+                                        target_key=miner_key, params=score, timeout=timeout)
             )
             return send_miner_score['answer']
         except Exception as e:
