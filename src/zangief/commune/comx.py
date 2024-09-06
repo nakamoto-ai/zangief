@@ -130,9 +130,9 @@ class ComxClient(ComxInterface):
             sleepy_time = random.uniform(1, 2)
             time.sleep(sleepy_time)
 
-    @abstractmethod
+    @staticmethod
     def get_node_url(
-        self, comx_settings: ComxSettings | None = None, *args, use_testnet: bool = False
+        comx_settings: ComxSettings | None = None, *args, use_testnet: bool = False
     ) -> str:
         """
         Args:
@@ -141,9 +141,9 @@ class ComxClient(ComxInterface):
         """
         return get_node_url(comx_settings=comx_settings, *args, use_testnet=use_testnet)
 
-    @abstractmethod
+    @staticmethod
     def classic_load_key(
-        self, name: str, password: str | None = None
+        name: str, password: str | None = None
     ) -> Keypair:
         """
         Args:
