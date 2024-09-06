@@ -9,7 +9,7 @@ import random
 import argparse
 from typing import cast, Any, Dict
 
-from src.zangief.commune.comx import ComxClient
+from zangief.commune.comx import ComxClient
 
 from communex.client import CommuneClient
 from communex.module.module import Module
