@@ -353,6 +353,9 @@ class TranslateValidator(Module):
             it = executor.map(get_miner_prediction, miners_to_query)
             miner_answers = [*it]
 
+        if target_language == 'zht':
+            target_language = 'zh-Hant'
+
         scores, full_scores = self.reward.get_scores(miner_prompt, target_language, miner_answers)
 
         for i, full_score in enumerate(full_scores):
