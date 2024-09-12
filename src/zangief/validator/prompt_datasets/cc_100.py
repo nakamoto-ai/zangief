@@ -15,40 +15,10 @@ class CC100(BaseDataset):
     def __init__(self):
         super().__init__()
         self.all_languages = [
-            "ar",
-            "bn",
-            "cs",
-            "de",
-            "el",
             "en",
-            "es",
-            "fa",
-            "fr",
-            "he",
-            "hi",
-            "hu",
-            "it",
-            "ja",
-            "jv",
-            "ko",
-            "my",
-            "nl",
-            "pa",
-            "pl",
-            "pt",
-            "ro",
-            "ru",
-            "sv",
-            "ta",
-            "te",
-            "th",
-            "tr",
-            "uk",
-            "ur",
-            "vi",
-            "zh",
+            "zht"
         ]
-        self.selected_languages = random.sample(self.all_languages, 10)
+        self.selected_languages = random.sample(self.all_languages, 2)
         self.languages_by_buffer_size = {
             lb: 50_000 for
             lb in self.selected_languages
