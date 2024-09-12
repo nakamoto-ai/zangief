@@ -12,7 +12,7 @@ from abc import abstractmethod
 class BaseMiner(Module):
 
     @endpoint
-    def score(self, bert: float, comet: float, composite: float):
+    def score(self, bert: float, comet: float, composite: float) -> Dict[str, bool]:
         logger.info("Your Scores:\n")
         logger.info(f"BERT: {bert}")
         logger.info(f"COMET: {comet}")
@@ -23,6 +23,12 @@ class BaseMiner(Module):
     def generate(self, prompt: str, source_language: str, target_language: str) -> dict[str, str]:
         start_time = time.time()
         logger.info(f"Generating translation... ")
+
+        if source_language == 'zht':
+            source_language = 'zh-Hant'
+
+        if target_language == 'zht':
+            target_language = 'zh-Hant'
 
         logger.info(f"Source ({source_language})")
         logger.info(f"{prompt}")
