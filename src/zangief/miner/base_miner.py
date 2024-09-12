@@ -7,6 +7,7 @@ from communex.compat.key import classic_load_key
 from loguru import logger
 from urllib.parse import urlparse
 from abc import abstractmethod
+from typing import Dict
 
 
 class BaseMiner(Module):
