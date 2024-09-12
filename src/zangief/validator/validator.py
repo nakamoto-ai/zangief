@@ -251,7 +251,7 @@ class TranslateValidator(Module):
     def get_miners_to_query(self, miners: list[dict[str, Any]]):
         current_weights = read_weight_file(self.weights_file)
         miners_to_query = []
-        excluded_uids = set([i for i in range(39)])
+        excluded_uids = set()
         counter = 0
         weights_changed = False
 
@@ -259,6 +259,8 @@ class TranslateValidator(Module):
 
         for miner in miners:
             uid = str(miner['uid'])
+            if int(uid) < 38:
+                continue
             miner_key = miner['key']
 
             if uid in current_weights:
