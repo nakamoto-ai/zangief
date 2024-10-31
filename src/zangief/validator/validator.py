@@ -7,7 +7,7 @@ from functools import partial
 import numpy as np
 import random
 import argparse
-from typing import cast, Any, Dict
+from typing import cast, Any, Dict, Optional, Match, List, Tuple, Callable
 
 from communex.client import CommuneClient
 from communex.module.client import ModuleClient
@@ -23,8 +23,9 @@ from loguru import logger
 
 from weights_io import ensure_weights_file, write_weight_file, read_weight_file
 from power_scaling import conditional_power_scaling
-from reward import Reward
+from reward import Reward, get_comet_model, get_bert_model
 from prompt_datasets.cc_100 import CC100
+from client import ModuleClientFactory
 
 from zangief.config.validator import ValidatorConfig
 
@@ -33,21 +34,21 @@ logger.add("logs/log_{time:YYYY-MM-DD}.log", rotation="1 day", level="INFO")
 IP_REGEX = re.compile(r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+")
 
 
-def extract_address(string: str):
+def extract_address(string: str) -> Optional[Match[str]]:
     """
     Extracts an address from a string.
     """
     return re.search(IP_REGEX, string)
 
 
-def get_miner_ip_port(client: CommuneClient, netuid: int, balances=False):
+def get_miner_ip_port(client: CommuneClient, netuid: int, balances: bool = False) -> List[Dict[str, Any]]:
     modules = cast(dict[str, Any], get_map_modules(
         client, netuid=netuid, include_balances=balances))
 
     # Convert the values to a human readable format
     modules_to_list = [value for _, value in modules.items()]
 
-    miners: list[Any] = []
+    miners = []
 
     for module in modules_to_list:
         if module["incentive"] == module["dividends"] == 0:
@@ -58,7 +59,7 @@ def get_miner_ip_port(client: CommuneClient, netuid: int, balances=False):
     return miners
 
 
-def get_ip_port(modules_adresses: dict[int, str]):
+def get_ip_port(modules_addresses: Dict[int, str]) -> Dict[str, str]:
     """
     Get the IP and port information from module addresses.
 
@@ -69,7 +70,7 @@ def get_ip_port(modules_adresses: dict[int, str]):
         A dictionary mapping module IDs to their IP and port information.
     """
 
-    filtered_addr = {id: extract_address(addr) for id, addr in modules_adresses.items()}
+    filtered_addr = {id: extract_address(addr) for id, addr in modules_addresses.items()}
     ip_port = {
         id: x.group(0).split(":") if x is not None else ["0.0.0.0", "00"] for id, x in filtered_addr.items()
     }
@@ -77,14 +78,14 @@ def get_ip_port(modules_adresses: dict[int, str]):
     return ip_port
 
 
-def get_netuid(is_testnet):
+def get_netuid(is_testnet: bool) -> int:
     if is_testnet:
         return 23
     else:
         return 13
 
 
-def normalize_scores(scores):
+def normalize_scores(scores: List[float]) -> List[float]:
     min_score = min(scores)
     max_score = max(scores)
 
@@ -96,6 +97,10 @@ def normalize_scores(scores):
     normalized_scores = [(score - min_score) / (max_score - min_score) for score in scores]
 
     return normalized_scores
+
+
+def all_miners_queried(remaining_miners: List[dict]) -> bool:
+    return len(remaining_miners) == 0
 
 
 class TranslateValidator(Module):
@@ -122,12 +127,16 @@ class TranslateValidator(Module):
         key: Keypair,
         netuid: int,
         client: CommuneClient,
+        module_client: ModuleClientFactory,
+        reward: Reward,
+        cc100: CC100,
         call_timeout: int = 30,
         use_testnet: bool = False,
     ) -> None:
         super().__init__()
         self.client = client
         self.key = key
+        self.module_client = module_client
         self.netuid = netuid
         self.call_timeout = call_timeout
         self.use_testnet = use_testnet
@@ -139,34 +148,19 @@ class TranslateValidator(Module):
         ensure_weights_file(zangief_dir_name=self.zangief_dir, weights_file_name=self.weights_file)
         write_weight_file(self.weights_file, {})
 
-        self.reward = Reward()
+        self.reward = reward
         self.languages = []
         self.datasets = {}
-        self.load_languages()
+        self.load_languages(cc100)
 
-    def load_languages(self):
-        cc_100 = CC100()
+    def load_languages(self, cc_100: CC100):
         self.languages = cc_100.selected_languages
         self.datasets = {
             l: [cc_100] for
             l in self.languages
         }
 
-    def get_addresses(self, client: CommuneClient, netuid: int) -> dict[int, str]:
-        """
-        Retrieve all module addresses from the subnet.
-
-        Args:
-            client: The CommuneClient instance used to query the subnet.
-            netuid: The unique identifier of the subnet.
-
-        Returns:
-            A dictionary mapping module IDs to their addresses.
-        """
-        module_addresses = client.query_map_address(netuid)
-        return module_addresses
-
-    def split_ip_port(self, ip_port):
+    def split_ip_port(self, ip_port: str) -> Tuple[Optional[str], Optional[str]]:
         # Check if the input is empty or None
         if not ip_port:
             return None, None
@@ -181,74 +175,86 @@ class TranslateValidator(Module):
         else:
             return None, None
 
-    def _get_miner_prediction(
-        self,
-        prompt: str,
-        miner_info: tuple[list[str], Ss58Address],
-    ) -> str | None:
-        """
-        Prompt a miner module to generate an answer to the given question.
+    def ip_port_invalid(self, ip: str | None, port: str | None) -> bool:
+        return ip in [None, "None"] or port in [None, "None"]
 
-        Args:
-            question: The question to ask the miner module.
-            miner_info: A tuple containing the miner's connection information and key.
-
-        Returns:
-            The generated answer from the miner module, or None if the miner fails to generate an answer.
-        """
-        question, source_language, target_language = prompt
-        connection = miner_info['address']
-        miner_key = miner_info['key']
-        module_ip, module_port = self.split_ip_port(connection)
-
-        if module_ip == "None" or module_port == "None" or module_ip is None or module_port is None:
-            return ""
-
-        client = ModuleClient(module_ip, int(module_port), self.key)
-
+    def miner_call(
+            self,
+            endpoint: str,
+            client: ModuleClient,
+            miner_key: Ss58Address,
+            data: Dict[Any, Any],
+            timeout: int,
+            return_bool: bool = False,
+            asyncio: Any = asyncio
+    ) -> Any:
         try:
             miner_answer = asyncio.run(
                 client.call(
-                    "generate",
+                    endpoint,
                     miner_key,
-                    {"prompt": question, "source_language": source_language, "target_language": target_language},
-                    timeout=self.call_timeout,
+                    data,
+                    timeout=timeout,
                 )
             )
             miner_answer = miner_answer["answer"]
             return miner_answer
         except Exception as e:
             logger.error(f"Error getting miner response: {e}")
+            if return_bool:
+                return False
             return ""
 
-    def _return_miner_scores(
-        self,
-        score: Dict[str, float],
-        miner_info: tuple[list[str], Ss58Address],
-    ):
+    def _get_miner_prediction(
+            self,
+            prompt: str,
+            miner_info: tuple[list[str], Ss58Address],
+    ) -> str | None:
+        """
+        Prompt a miner module to generate an answer to the given question.
+
+        Args:
+            prompt: The question to ask the miner module.
+            miner_info: A tuple containing the miner's connection information and key.
+
+        Returns:
+            The generated answer from the miner module, or None if the miner fails to generate an answer.
+        """
+
         connection = miner_info['address']
         miner_key = miner_info['key']
         module_ip, module_port = self.split_ip_port(connection)
 
-        if module_ip == "None" or module_port == "None" or module_ip is None or module_port is None:
+        if self.ip_port_invalid(module_ip, module_port):
+            return ""
+
+        client = self.module_client.create_client(module_ip, int(module_port))
+
+        question, source_language, target_language = prompt
+        miner_data = {"prompt": question, "source_language": source_language, "target_language": target_language}
+
+        miner_prediction = self.miner_call("generate", client, miner_key, miner_data, timeout=self.call_timeout)
+
+        return miner_prediction
+
+    def _return_miner_scores(
+            self,
+            score: Dict[str, float],
+            miner_info: tuple[list[str], Ss58Address],
+    ) -> bool | str:
+        connection = miner_info['address']
+        miner_key = miner_info['key']
+        module_ip, module_port = self.split_ip_port(connection)
+
+        if self.ip_port_invalid(module_ip, module_port):
             return False
 
-        client = ModuleClient(module_ip, int(module_port), self.key)
+        client = self.module_client.create_client(module_ip, int(module_port))
 
-        try:
-            send_miner_score = asyncio.run(
-                client.call(
-                    "score",
-                    miner_key,
-                    score,
-                    timeout=10
-                )
-            )
-            return send_miner_score['answer']
-        except Exception as e:
-            return False
+        miner_answer = self.miner_call("score", client, miner_key, score, timeout=10, return_bool=True)
+        return miner_answer
 
-    def get_miners_to_query(self, miners: list[dict[str, Any]]):
+    def get_miners_to_query(self, miners: list[dict[str, Any]]) -> Tuple[Optional[str], Optional[str]]:
         current_weights = read_weight_file(self.weights_file)
         miners_to_query = []
         excluded_uids = set()
@@ -288,7 +294,7 @@ class TranslateValidator(Module):
 
         return remaining_miners, miners_to_query
 
-    def get_miner_prompt(self) -> tuple:
+    def get_miner_prompt(self) -> Tuple[str, str, str]:
         """
         Generate a prompt for the miner modules.
 
@@ -306,8 +312,119 @@ class TranslateValidator(Module):
         source_text = source_dataset.get_random_record(source_language)
         return source_text, source_language, target_language
 
+    def verify_validator_key(self, netuid: int) -> bool:
+        modules_keys = self.client.query_map_key(netuid)
+        val_ss58 = self.key.ss58_address
+        if val_ss58 not in modules_keys.values():
+            logger.error(f"Validator key {val_ss58} is not registered in subnet")
+            return False
+
+        for uid, ss58 in modules_keys.items():
+            if ss58.__str__() == val_ss58:
+                self.uid = uid
+        return True
+
+    def prompt_miners(self, get_miner_prediction: Callable[[Tuple[list[str], Ss58Address]], Optional[str]],
+                      miners_to_query: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        logger.debug("Prompting miners...")
+        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+            it = executor.map(get_miner_prediction, miners_to_query)
+            miner_answers = [*it]
+        return miner_answers
+
+    def return_miner_scores(self, full_scores: List[Dict[str, str]], miners_to_query: List[Dict[str, Any]]):
+        for i, full_score in enumerate(full_scores):
+            send_miner_score = partial(self._return_miner_scores, full_score)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+                rs = executor.map(send_miner_score, [miners_to_query[i]])
+                successes = [*rs]
+
+    def get_score_dict(self, miners_to_query: List[Dict[str, Any]], scores: List[float]) -> Dict[int, float]:
+        score_dict = {}
+        for uid, score in zip([m['uid'] for m in miners_to_query], scores):
+            score_dict[uid] = score
+        logger.info(f"SCORE DICT: {score_dict}")
+        return score_dict
+
+    def get_data_to_write(self, miners_to_query: List[Dict[str, Any]],
+                          score_dict: Dict[int, float]) -> Dict[int, Dict[str, Ss58Address | float]]:
+        data_to_write = {}
+        for item in miners_to_query:
+            ss58 = item['key']
+            uid = int(item['uid'])
+            score = score_dict[uid]
+            data_to_write[uid] = {"ss58": ss58, "score": score}
+        return data_to_write
+
+    def get_current_weights(self, data_to_write: Dict[int, Dict[str, Ss58Address | float]]) \
+            -> Dict[int, Dict[str, Ss58Address | float]]:
+        current_weights = read_weight_file(self.weights_file)
+        for key, data in data_to_write.items():
+            current_weights[key] = data
+        return current_weights
+
+    def write_current_weights(self, miners_to_query: List[Dict[str, Any]], score_dict: Dict[int, float]):
+        data_to_write = self.get_data_to_write(miners_to_query, score_dict)
+        current_weights = self.get_current_weights(data_to_write)
+        write_weight_file(self.weights_file, current_weights)
+
+    def get_full_score_dict(self) -> Dict[int, float]:
+        scores = read_weight_file(self.weights_file)
+        full_score_dict = {}
+        for uid, data in scores.items():
+            full_score_dict[uid] = data['score']
+        return full_score_dict
+
+    def reset_validator(self):
+        write_weight_file(self.weights_file, {})
+        self.load_languages()
+
+    def get_miner_answers(self, prompt: str, miners_to_query: List[Dict[str, Any]]):
+        logger.debug("Creating miner prediction partial...")
+        get_miner_prediction = partial(self._get_miner_prediction, prompt)
+        miner_answers = self.prompt_miners(get_miner_prediction, miners_to_query)
+        return miner_answers
+
+    def get_unweighted_scores(self, full_score_dict: Dict[int, float]) -> Tuple[float, Dict[int, float]]:
+        abnormal_scores = full_score_dict.values()
+        normal_scores = normalize_scores(abnormal_scores)
+        normal_score_dict = {uid: score for uid, score in zip(full_score_dict.keys(), normal_scores)}
+
+        power_scaled_scores = conditional_power_scaling(normal_score_dict)
+        unweighted_scores = sum(power_scaled_scores.values())
+        return unweighted_scores, power_scaled_scores
+
+    def normalize_weighted_scores(self, weighted_scores: Dict[int, float]) -> Dict[int, float]:
+        return {k: v for k, v in zip(weighted_scores.keys(), normalize_scores(weighted_scores.values())) if v != 0}
+
+    def get_weighted_scores(self, unweighted_scores: float, power_scaled_scores: Dict[int, float]) -> Dict[int, float]:
+        weighted_scores = {}
+        for uid, score in power_scaled_scores.items():
+            weight = score * 1000 / unweighted_scores
+            weighted_scores[uid] = weight
+        normal_nonzero_weighted_scores = self.normalize_weighted_scores(weighted_scores)
+        return normal_nonzero_weighted_scores
+
+    def remove_validator_uid(self, weighted_scores: Dict[int, float]):
+        if self.uid is not None and str(self.uid) in weighted_scores:
+            del weighted_scores[str(self.uid)]
+            logger.info(f"REMOVING UID !!!!!! {self.uid}")
+        else:
+            logger.info("NOT REMOVING ANY UID")
+
+    def get_final_uids_weights(self, weighted_scores: Dict[int, float]) -> Tuple[List[int], List[int]]:
+        str_uids = list(weighted_scores.keys())
+        uids = [eval(i) for i in str_uids]
+
+        str_weights = list(weighted_scores.values())
+        weights = [int(weight) * 1000 for weight in str_weights]
+
+        logger.info(f"**********************************\nUIDS: {uids}")
+        logger.info(f"WEIGHTS TO SET: {weights}\n**********************************")
+        return uids, weights
+
     async def validate_step(
-        self, netuid: int
+            self, netuid: int
     ) -> None:
         """
         Perform a validation step.
@@ -321,88 +438,32 @@ class TranslateValidator(Module):
 
         miners = get_miner_ip_port(self.client, self.netuid)
 
-        modules_keys = self.client.query_map_key(netuid)
-        val_ss58 = self.key.ss58_address
-        if val_ss58 not in modules_keys.values():
-            logger.error(f"Validator key {val_ss58} is not registered in subnet")
+        validator_key_verified = self.verify_validator_key(netuid)
+        if not validator_key_verified:
             return None
 
-        for uid, ss58 in modules_keys.items():
-            if ss58.__str__() == val_ss58:
-                self.uid = uid
-
         remaining_miners, miners_to_query = self.get_miners_to_query(miners)
-
         miner_prompt, source_language, target_language = self.get_miner_prompt()
 
-        logger.debug("Source")
-        logger.debug(source_language)
-        logger.debug("Target")
-        logger.debug(target_language)
-        logger.debug("Prompt")
-        logger.debug(miner_prompt)
+        logger.debug(f"Source\n{source_language}\nTarget\n{target_language}\nPrompt\n{miner_prompt}")
 
         prompt = (miner_prompt, source_language, target_language)
-        logger.debug("Creating miner prediction partial...")
-        get_miner_prediction = partial(self._get_miner_prediction, prompt)
+        miner_answers = self.get_miner_answers(prompt, miners_to_query)
 
-        logger.debug("Prompting miners...")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-            it = executor.map(get_miner_prediction, miners_to_query)
-            miner_answers = [*it]
+        scores, scores_to_return = self.reward.get_scores(miner_prompt, target_language, miner_answers)
 
-        scores, full_scores = self.reward.get_scores(miner_prompt, target_language, miner_answers)
+        self.return_miner_scores(scores_to_return, miners_to_query)
+        logger.debug(f"Miner prompt\n{miner_prompt}\nMiner answers\n{miner_answers}\nRaw scores\n{scores}")
 
-        for i, full_score in enumerate(full_scores):
-            send_miner_score = partial(self._return_miner_scores, full_score)
+        score_dict = self.get_score_dict(miners_to_query, scores)
+        self.write_current_weights(miners_to_query, score_dict)
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-                rs = executor.map(send_miner_score, [miners_to_query[i]])
-                successes = [*rs]
+        logger.info(f"READ DATA: {read_weight_file(self.weights_file)}")
+        logger.info(f"\nMiner UIDs\n{[m['uid'] for m in miners_to_query]}\nFinal scores\n{scores}")
 
-        logger.debug("Miner prompt")
-        logger.debug(miner_prompt)
-        logger.debug("Miner answers")
-        logger.debug(miner_answers)
-        logger.debug("Raw scores")
-        logger.debug(scores)
-
-        score_dict: dict[int, float] = {}
-        for uid, score in zip([m['uid'] for m in miners_to_query], scores):
-            score_dict[uid] = score
-
-        data_to_write = {}
-        logger.info(f"SCORE DICT: {score_dict}")
-        for item in miners_to_query:
-            ss58 = item['key']
-            uid = int(item['uid'])
-            score = score_dict[uid]
-            data_to_write[uid] = {"ss58": ss58, "score": score}
-
-        current_weights = read_weight_file(self.weights_file)
-        for key, data in data_to_write.items():
-            current_weights[key] = data
-
-        write_weight_file(self.weights_file, current_weights)
-        ddd = read_weight_file(self.weights_file)
-        logger.info(f"READ DATA: {ddd}")
-
-        logger.info("Miner UIDs")
-        logger.info([m['uid'] for m in miners_to_query])
-        logger.info("Final scores")
-        logger.info(scores)
-
-        if len(remaining_miners) == 0:
-            scores = read_weight_file(self.weights_file)
-
-            s_dict: dict[int: float] = {}
-            for uid, data in scores.items():
-                s_dict[uid] = data['score']
-
-            logger.info("SETTING WEIGHTS")
-            self.set_weights(s_dict)
-            write_weight_file(self.weights_file, {})
-            self.load_languages()
+        if all_miners_queried(remaining_miners):
+            self.set_weights()
+            self.reset_validator()
 
     def validation_loop(self, interval: int = 20) -> None:
         while True:
@@ -411,88 +472,103 @@ class TranslateValidator(Module):
             logger.info(f"Sleeping for {interval} seconds ... ")
             time.sleep(interval)
 
-    def set_weights(self, s_dict):
+    def set_weights(self):
         """
         Set weights for miners based on their normalized and power scaled scores.
         """
-        full_score_dict = s_dict
-        weighted_scores: dict[int: float] = {}
+        full_score_dict = self.get_full_score_dict()
 
-        abnormal_scores = full_score_dict.values()
-        normal_scores = normalize_scores(abnormal_scores)
-        score_dict = {uid: score for uid, score in zip(full_score_dict.keys(), normal_scores)}
-        power_scaled_scores = conditional_power_scaling(score_dict)
-        scores = sum(power_scaled_scores.values())
+        unweighted_scores, power_scaled_scores = self.get_unweighted_scores(full_score_dict)
+        weighted_scores = self.get_weighted_scores(unweighted_scores, power_scaled_scores)
 
-        for uid, score in power_scaled_scores.items():
-            weight = score * 1000 / scores
-            weighted_scores[uid] = weight
+        self.remove_validator_uid(weighted_scores)
 
-        weighted_scores = {k: v for k, v in zip(
-            weighted_scores.keys(), normalize_scores(weighted_scores.values())) if v != 0}
+        uids, weights = self.get_final_uids_weights(weighted_scores)
+        self.commune_client_vote(uids, weights)
 
-        if self.uid is not None and str(self.uid) in weighted_scores:
-            del weighted_scores[str(self.uid)]
-            logger.info(f"REMOVING UID !!!!!! {self.uid}")
-        else:
-            logger.info("NOT REMOVING ANY UID")
+    def _attempt_vote(self, uids: List[int], weights: List[int]):
+        """Helper method to encapsulate the voting action."""
+        self.client.vote(key=self.key, uids=uids, weights=weights, netuid=self.netuid)
 
-        uids = list(weighted_scores.keys())
-        intuids = [eval(i) for i in uids]
-        weights = list(weighted_scores.values())
-        intweights = [int(weight * 1000) for weight in weights]
+    def commune_client_vote(self, uids: List[int], weights: List[int], max_retries: int = 35,
+                            retry_delay: int | None = None):
+        attempt = 0
+        while attempt <= max_retries:
+            try:
+                self._attempt_vote(uids, weights)
+                return
+            except Exception as e:
+                attempt += 1
+                logger.error(f"WARNING: Failed to set weights with exception: {e}. Attempt {attempt} of {max_retries}.")
+                if attempt > max_retries:
+                    raise
+                if retry_delay is None:
+                    retry_delay = random.uniform(1, 2)
+                time.sleep(retry_delay)
 
-        logger.info("**********************************")
-        logger.info(f"UIDS: {intuids}")
-        logger.info(f"WEIGHTS TO SET: {intweights}")
-        logger.info("**********************************")
-
-        try:
-            self.client.vote(key=self.key, uids=intuids, weights=intweights, netuid=self.netuid)
-        except Exception as e:
-            logger.error(f"WARNING: Failed to set weights with exception: {e}. Will retry.")
-            sleepy_time = random.uniform(1, 2)
-            time.sleep(sleepy_time)
-            # retry with a different node
-            self.client = CommuneClient(get_node_url(use_testnet=self.use_testnet))
-            self.client.vote(key=self.key, uids=intuids, weights=intweights, netuid=self.netuid)
+                self.client = CommuneClient(get_node_url(use_testnet=self.use_testnet))
 
 
-if __name__ == '__main__':
+def get_validator_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="zangief validator")
     parser.add_argument("--env", type=str, default=".env", help="config file path")
     parser.add_argument('--ignore-env-file', action='store_true', help='If set, ignore .env file')
     args = parser.parse_args()
+    return args
 
+
+def load_validator_config(args: argparse.Namespace) -> Dict[str, Any]:
     logger.info("Loading validator config ... ")
-
-    # Load config, and get the values.
     validator_config = ValidatorConfig(env_path=args.env, ignore_config_file=args.ignore_env_file)
+    validator_config = {
+        'testnet': validator_config.get_testnet(),
+        'key_name': validator_config.get_key_name(),
+        'netuid': validator_config.get_netuid(),
+        'call_timeout': validator_config.get_validator_call_timeout(),
+        'interval': validator_config.get_validator_interval(),
+        'key_password': validator_config.get_key_password()
+    }
+    return validator_config
 
-    testnet = validator_config.get_testnet()
-    keyname = validator_config.get_key_name()
-    netuid = validator_config.get_netuid()
-    call_timeout = validator_config.get_validator_call_timeout()
-    interval = validator_config.get_validator_interval()
-    key_password = validator_config.get_key_password()
 
-    if key_password is not None:
-        key = classic_load_key(keyname, password=key_password)
-    else:
-        key = classic_load_key(keyname)
+def get_key(config: Dict[str, Any]) -> Keypair:
+    return classic_load_key(
+        config['key_name'],
+        password=config.get('key_password', None)
+    )
 
-    if testnet:
-        logger.info("Connecting to TEST network ... ")
-    else:
-        logger.info("Connecting to Main network ... ")
+
+def test_or_main(config: Dict[str, Any]) -> str:
+    if config.get('testnet', False):
+        return "TEST"
+    return "Main"
+
+
+def create_validator() -> Tuple[TranslateValidator, int]:
+    args = get_validator_args()
+    config = load_validator_config(args)
+    key = get_key(config)
+
+    logger.info(f"Connecting to {test_or_main(config)} network ... ")
 
     validator = TranslateValidator(
         key=key,
-        netuid=netuid,
-        client=CommuneClient(get_node_url(use_testnet=testnet)),
-        call_timeout=call_timeout,
-        use_testnet=testnet
+        netuid=config['netuid'],
+        client=CommuneClient(get_node_url(use_testnet=config['testnet'])),
+        module_client=ModuleClientFactory(key),
+        reward=Reward(comet_model=get_comet_model(), bert_model=get_bert_model()),
+        cc100=CC100(),
+        call_timeout=config['call_timeout'],
+        use_testnet=config['testnet']
     )
+    return validator, config['interval']
 
+
+def run_validator():
+    validator, interval = create_validator()
     logger.info("Running validator ... ")
     validator.validation_loop(interval=interval)
+
+
+if __name__ == '__main__':
+    run_validator()

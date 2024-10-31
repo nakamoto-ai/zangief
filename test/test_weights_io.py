@@ -1,6 +1,8 @@
+
 import os
 import shutil
 from zangief.validator.weights_io import ensure_weights_file
+
 
 def test_ensure_weights_file():
     home_dir = os.path.expanduser("~")
@@ -22,6 +24,7 @@ def test_ensure_weights_file():
     assert file_created == True
 
     shutil.rmtree(dir_name)
+
 
 if __name__ == "__main__":
     test_ensure_weights_file()
