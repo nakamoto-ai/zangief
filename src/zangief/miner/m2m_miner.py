@@ -2,7 +2,7 @@ from transformers import (
     M2M100ForConditionalGeneration,
     M2M100Tokenizer)
 from base_miner import BaseMiner
-from src.zangief.miner.config import Config
+from config import Config
 
 
 class M2MMiner(BaseMiner):
