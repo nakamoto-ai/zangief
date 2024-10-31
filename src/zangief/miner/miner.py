@@ -24,8 +24,7 @@ class Miner:
         self.config = config
         self.miner_classes = miner_classes or {
             "m2m": self._import_miner_class("m2m_miner", "M2MMiner"),
-            "openai": self._import_miner_class("openai_miner", "OpenAIMiner"),
-            "translate": self._import_miner_class("translate_miner", "TranslateMiner")
+            "openai": self._import_miner_class("openai_miner", "OpenAIMiner")
         }
         self.miner = None
 
