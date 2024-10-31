@@ -49,7 +49,7 @@ class CC100(BaseDataset):
         return self.buffer_dataset(dataset, language)
 
     @staticmethod
-    def filter_dataset(example: Dict[str]) -> bool:
+    def filter_dataset(example: Dict[int, str]) -> bool:
         text = example["text"].strip()
         length_filter = len(text) > 50
         url_filter = CC100.contains_url(text)
