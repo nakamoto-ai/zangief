@@ -66,7 +66,7 @@ class BaseMiner(Module):
         logger.info(f"Connecting to {get_test_or_main(use_testnet)} network ... ")
 
         bucket = TokenBucketLimiter(1000, refill_rate)
-        server = ModuleServer(miner, key, limiter=bucket, subnets_whitelist=[13], use_testnet=use_testnet)
+        server = ModuleServer(miner, key, limiter=bucket, subnets_whitelist=[23], use_testnet=use_testnet)
         app = server.get_fastapi_app()
 
         uvicorn.run(app, host=parsed_url.hostname, port=parsed_url.port)
