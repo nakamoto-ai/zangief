@@ -32,7 +32,7 @@ class CC100(BaseDataset):
         return random.sample(self.all_languages, count)
 
     def assign_buffer_sizes(self) -> Dict[str, int]:
-        return {lang: 50_000 for lang in self.selected_languages}
+        return {self.LANGUAGE_ALIAS.get(lang, lang): 50_000 for lang in self.selected_languages}
 
     def load_datasets(self) -> Dict[str, List[str]]:
         datasets = {}
