@@ -189,6 +189,8 @@ class TranslateValidator(Module):
             asyncio: Any = asyncio
     ) -> Any:
         try:
+            if endpoint == "score":
+                logger.info(f"Returning Miner Score: {data}")
             miner_answer = asyncio.run(
                 client.call(
                     endpoint,
@@ -198,8 +200,10 @@ class TranslateValidator(Module):
                 )
             )
             miner_answer = miner_answer["answer"]
+            logger.info("Miner Score Return Successful")
             return miner_answer
         except Exception as e:
+            logger.info("Miner Score Return Unsuccessful")
             logger.error(f"Error getting miner response: {e}")
             if return_bool:
                 return False
@@ -251,6 +255,7 @@ class TranslateValidator(Module):
 
         client = self.module_client.create_client(module_ip, int(module_port))
 
+        logger.info("Return Score Module Created.")
         miner_answer = self.miner_call("score", client, miner_key, score, timeout=10, return_bool=True)
         return miner_answer
 
@@ -333,6 +338,7 @@ class TranslateValidator(Module):
         return miner_answers
 
     def return_miner_scores(self, full_scores: List[Dict[str, str]], miners_to_query: List[Dict[str, Any]]):
+        logger.info("Returning Miner scores...")
         for i, full_score in enumerate(full_scores):
             send_miner_score = partial(self._return_miner_scores, full_score)
             with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
