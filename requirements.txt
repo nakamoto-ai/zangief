@@ -11,3 +11,4 @@ datasets
 langid
 openai
 huggingface-cli
+uvloop
