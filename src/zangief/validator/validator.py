@@ -458,6 +458,8 @@ class TranslateValidator(Module):
 
         scores, scores_to_return = self.reward.get_scores(miner_prompt, target_language, miner_answers)
 
+        logger.info(f"Scores to Return: {scores_to_return}")
+
         self.return_miner_scores(scores_to_return, miners_to_query)
         logger.debug(f"Miner prompt\n{miner_prompt}\nMiner answers\n{miner_answers}\nRaw scores\n{scores}")
 
