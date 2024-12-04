@@ -74,5 +74,8 @@ class CC100(BaseDataset):
         return buffer
 
     def get_random_record(self, language: str = "es") -> str:
-        row = random.choice(self.datasets[language])
+        resolved_language = self.LANGUAGE_ALIAS.get(language, language)
+        if resolved_language not in self.datasets:
+            raise KeyError(f"Language '{language}' (resolved as '{resolved_language}') not found in datasets.")
+        row = random.choice(self.datasets[resolved_language])
         return row["text"]

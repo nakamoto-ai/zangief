@@ -32,6 +32,8 @@ class BaseMiner(Module):
 
     @endpoint
     def score(self, bert: float, comet: float, composite: float) -> Dict[str, bool]:
+        print(f"Your Scores:\n\nBERT: {bert}\nCOMET: {comet}")
+        print(f"Composite Score (50% BERT + 50% COMET): {composite}")
         logger.info(f"Your Scores:\n\nBERT: {bert}\nCOMET: {comet}")
         logger.info(f"Composite Score (50% BERT + 50% COMET): {composite}")
         return {"answer": True}
