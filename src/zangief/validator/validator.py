@@ -340,7 +340,7 @@ class TranslateValidator(Module):
 
     def return_miner_scores(self, full_scores: Dict[int, str], miners_to_query: List[Dict[str, Any]]):
         logger.info("Returning Miner scores...")
-        for i, full_score in enumerate(full_scores.values()):
+        for i, full_score in full_scores.items():
             send_miner_score = partial(self._return_miner_scores, full_score)
             with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
                 logger.info(f"Full Score To Return: {full_score}")
