@@ -343,8 +343,6 @@ class TranslateValidator(Module):
         for i, full_score in full_scores.items():
             send_miner_score = partial(self._return_miner_scores, full_score)
             with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
-                logger.info(f"Full Score To Return: {full_score}")
-                logger.info(f"Miner to Query: {[miners_to_query[i]]}")
                 rs = executor.map(send_miner_score, [miners_to_query[i]])
                 successes = [*rs]
 
@@ -464,6 +462,7 @@ class TranslateValidator(Module):
         logger.info(f"Scores to Return: {scores_to_return}")
 
         self.return_miner_scores(scores_to_return, miners_to_query)
+
         logger.debug(f"Miner prompt\n{miner_prompt}\nMiner answers\n{miner_answers}\nRaw scores\n{scores}")
 
         score_dict = self.get_score_dict(miners_to_query, scores)

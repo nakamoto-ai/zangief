@@ -117,23 +117,16 @@ class Reward:
 
     def get_scores(self, source: str, target_language: str, targets: List[str], logger)\
             -> Tuple[List[int], Dict[int, Dict[str, str]]]:
-        logger.info(f"Source: {source}\nTargets: {targets}\nTarget Language: {target_language}")
 
         cleaned_targets, empty_indexes = self.get_targets_and_indexes(targets, target_language)
-
-        logger.info(f"Cleaned Targets: {cleaned_targets}\nEmpty Indexes: {empty_indexes}")
 
         composite_scores = []
 
         fulls = []
         if len(cleaned_targets) > 0:
             sources, bert_scores, comet_scores = self.get_sources_and_scores(source, cleaned_targets)
-            logger.info(f"Sources: {sources}\nBert Scores: {bert_scores}\nComet Scores: {comet_scores}")
             fulls = self.get_full_score_objects(cleaned_targets, bert_scores, comet_scores, composite_scores)
-            logger.info(f"Fulls: {fulls}\nComposite Scores: {composite_scores}")
 
         final_scores, full_scores = self.get_final_full_scores(empty_indexes, composite_scores, targets, fulls)
-
-        logger.info(f"Final Scores: {final_scores}\nFull Scores: {full_scores}")
 
         return final_scores, full_scores
