@@ -242,9 +242,9 @@ class TranslateValidator(Module):
         return miner_prediction
 
     def _return_miner_scores(
-            self,
-            score: Dict[str, float],
-            miner_info: tuple[list[str], Ss58Address],
+        self,
+        score: Dict[str, float],
+        miner_info: tuple[list[str], Ss58Address],
     ) -> bool | str:
         connection = miner_info['address']
         miner_key = miner_info['key']
@@ -256,6 +256,7 @@ class TranslateValidator(Module):
         client = self.module_client.create_client(module_ip, int(module_port))
 
         logger.info("Return Score Module Created.")
+        logger.info(f"Score Object To Be Returned: {score}")
         miner_answer = self.miner_call("score", client, miner_key, score, timeout=10, return_bool=True)
         return miner_answer
 
@@ -342,6 +343,8 @@ class TranslateValidator(Module):
         for i, full_score in enumerate(full_scores):
             send_miner_score = partial(self._return_miner_scores, full_score)
             with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+                logger.info(f"Full Score To Return: {full_score}")
+                logger.info(f"Miner to Query: {[miners_to_query[i]]}")
                 rs = executor.map(send_miner_score, [miners_to_query[i]])
                 successes = [*rs]
 
