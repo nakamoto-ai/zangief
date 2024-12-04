@@ -456,7 +456,7 @@ class TranslateValidator(Module):
         prompt = (miner_prompt, source_language, target_language)
         miner_answers = self.get_miner_answers(prompt, miners_to_query)
 
-        scores, scores_to_return = self.reward.get_scores(miner_prompt, target_language, miner_answers)
+        scores, scores_to_return = self.reward.get_scores(miner_prompt, target_language, miner_answers, logger)
 
         logger.info(f"Scores to Return: {scores_to_return}")
 

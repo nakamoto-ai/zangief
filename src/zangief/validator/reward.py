@@ -5,7 +5,6 @@ from comet.models.base import CometModel
 from bert_score import BERTScorer
 from typing import List, Dict, Any, Tuple
 import langid
-from validator import logger
 
 
 def get_comet_model() -> CometModel:
@@ -116,7 +115,7 @@ class Reward:
         }
         return final_scores, full_scores
 
-    def get_scores(self, source: str, target_language: str, targets: List[str])\
+    def get_scores(self, source: str, target_language: str, targets: List[str], logger)\
             -> Tuple[List[int], Dict[int, Dict[str, str]]]:
         logger.info(f"Source: {source}\nTargets: {targets}\nTarget Language: {target_language}")
 
