@@ -161,14 +161,11 @@ class TranslateValidator(Module):
         }
 
     def split_ip_port(self, ip_port: str) -> Tuple[Optional[str], Optional[str]]:
-        # Check if the input is empty or None
         if not ip_port:
             return None, None
 
-        # Split the input string by the colon
         parts = ip_port.split(":")
 
-        # Check if the split resulted in exactly two parts
         if len(parts) == 2:
             ip, port = parts
             return ip, port
@@ -475,11 +472,12 @@ class TranslateValidator(Module):
             self.set_weights()
             self.reset_validator()
 
-    def validation_loop(self, interval: int = 20) -> None:
+    def validation_loop(self, interval: int = 10) -> None:
         while True:
             logger.info("Begin validator step ... ")
             asyncio.run(self.validate_step(self.netuid))
-            interval = 1
+            if self.use_testnet:
+                interval = 1
             logger.info(f"Sleeping for {interval} seconds ... ")
             time.sleep(interval)
 
