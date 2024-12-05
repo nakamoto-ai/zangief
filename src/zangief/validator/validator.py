@@ -21,11 +21,11 @@ from substrateinterface import Keypair
 
 from loguru import logger
 
-from weights_io import ensure_weights_file, write_weight_file, read_weight_file
-from power_scaling import conditional_power_scaling
-from reward import Reward, get_comet_model, get_bert_model
-from prompt_datasets.cc_100 import CC100
-from client import ModuleClientFactory
+from .weights_io import ensure_weights_file, write_weight_file, read_weight_file
+from .power_scaling import conditional_power_scaling
+from .reward import Reward, get_comet_model, get_bert_model
+from .prompt_datasets.cc_100 import CC100
+from .client import ModuleClientFactory
 
 from zangief.config.validator import ValidatorConfig
 
@@ -547,7 +547,7 @@ def get_key(config: Dict[str, Any]) -> Keypair:
     )
 
 
-def test_or_main(config: Dict[str, Any]) -> str:
+def return_net_type(config: Dict[str, Any]) -> str:
     if config.get('testnet', False):
         return "TEST"
     return "Main"
@@ -558,7 +558,7 @@ def create_validator() -> Tuple[TranslateValidator, int]:
     config = load_validator_config(args)
     key = get_key(config)
 
-    logger.info(f"Connecting to {test_or_main(config)} network ... ")
+    logger.info(f"Connecting to {return_net_type(config)} network ... ")
 
     validator = TranslateValidator(
         key=key,

@@ -1,4 +1,3 @@
-from distutils.command.clean import clean
 
 from comet import download_model, load_from_checkpoint
 from comet.models.base import CometModel

@@ -44,7 +44,7 @@ class CC100(BaseDataset):
         return datasets
 
     def prepare_dataset(self, language: str, buffer_size: int) -> List[str]:
-        streaming_dataset = load_dataset("cc100", language, split="train", streaming=True)
+        streaming_dataset = load_dataset("cc100", language, split="train", streaming=True, trust_remote_code=True)
         dataset = streaming_dataset.shuffle(seed=1137, buffer_size=buffer_size).filter(self.filter_dataset)
         return self.buffer_dataset(dataset, language)
 
@@ -52,13 +52,13 @@ class CC100(BaseDataset):
     def filter_dataset(example: Dict[int, str]) -> bool:
         text = example["text"].strip()
         length_filter = len(text) > 50
-        url_filter = CC100.contains_url(text)
+        url_filter = not CC100.contains_url(text)
         return length_filter and url_filter
 
     @staticmethod
     def contains_url(text: str) -> bool:
         url_pattern = re.compile(r'https?://\S+|www\.\S+')
-        return not bool(url_pattern.search(text))
+        return bool(url_pattern.search(text))
 
     def buffer_dataset(self, dataset: Dict[str, Any], language: str) -> List[Any]:
         buffer_size = self.languages_by_buffer_size[language]

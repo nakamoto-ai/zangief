@@ -11,3 +11,5 @@ datasets
 langid
 openai
 huggingface-cli
+pytest
+pytest-mock
