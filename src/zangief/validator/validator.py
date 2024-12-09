@@ -140,6 +140,7 @@ class TranslateValidator(Module):
         self.netuid = netuid
         self.call_timeout = call_timeout
         self.use_testnet = use_testnet
+        self.cc_100 = cc100
         self.uid = None
         home_dir = os.path.expanduser("~")
         commune_dir = os.path.join(home_dir, ".commune")
@@ -381,7 +382,7 @@ class TranslateValidator(Module):
 
     def reset_validator(self):
         write_weight_file(self.weights_file, {})
-        self.load_languages()
+        self.load_languages(self.cc_100)
 
     def get_miner_answers(self, prompt: str, miners_to_query: List[Dict[str, Any]]):
         logger.debug("Creating miner prediction partial...")

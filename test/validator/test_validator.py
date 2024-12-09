@@ -1,9 +1,14 @@
 import pytest
 from dataclasses import dataclass
 from typing import List, Dict, Optional, Any, Tuple
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, Mock
 import argparse
+from substrateinterface import Keypair
+from communex.client import CommuneClient
+from communex.module.client import ModuleClient
 
+from zangief.validator.prompt_datasets.cc_100 import CC100
+from zangief.validator.client import ModuleClientFactory
 from zangief.validator.reward import Reward
 from zangief.validator.validator import (
     TranslateValidator,
@@ -326,14 +331,23 @@ class TestTranslateValidator:
         return mock_cc100
 
     def setup_validator(self, mock_cc100):
-        return TranslateValidator(
-            key=MagicMock(),
-            netuid=1,
-            client=MagicMock(),
-            module_client=MagicMock(),
-            reward=MagicMock(spec=Reward),
-            cc100=mock_cc100,
+        mock_cc100.selected_languages = ["en", "fr", "es"]
+
+        key = MagicMock(spec=Keypair)
+        netuid = 1
+        client = MagicMock(spec=CommuneClient)
+        module_client = MagicMock(spec=ModuleClientFactory)
+        reward = MagicMock(spec=Reward)
+
+        validator = TranslateValidator(
+            key=key,
+            netuid=netuid,
+            client=client,
+            module_client=module_client,
+            reward=reward,
+            cc100=mock_cc100
         )
+        return validator
 
     @dataclass
     class SplitIpPortInputData:
@@ -445,4 +459,296 @@ class TestTranslateValidator:
             assert validator.uid == 1
         else:
             assert validator.uid is None
+
+    @dataclass
+    class LoadLanguagesInputData:
+        selected_languages: List[str]
+        expected_languages: List[str]
+
+    @pytest.mark.parametrize("input_data", [
+        LoadLanguagesInputData(selected_languages=["en", "fr", "es"], expected_languages=["en", "fr", "es"]),
+    ])
+    def test_load_languages(self, input_data: LoadLanguagesInputData):
+        mock_cc100 = MagicMock(spec=CC100)
+        mock_cc100.selected_languages = input_data.selected_languages
+
+        validator = self.setup_validator(mock_cc100)
+
+        validator.load_languages(mock_cc100)
+
+        assert validator.languages == input_data.expected_languages
+        assert validator.datasets == {lang: [mock_cc100] for lang in input_data.expected_languages}
+
+    @dataclass
+    class GetMinerPredictionInputData:
+        prompt: Tuple[str, str, str]
+        miner_info: Dict[str, str]
+        miner_response: str
+        expected_result: str
+
+    @pytest.mark.parametrize("input_data", [
+        GetMinerPredictionInputData(
+            prompt=("Translate this", "en", "fr"),
+            miner_info={"address": "127.0.0.1:8080", "key": "miner_key"},
+            miner_response="Translation result",
+            expected_result="Translation result",
+        ),
+    ])
+    @patch.object(TranslateValidator, "miner_call")
+    def test_get_miner_prediction(self, mock_miner_call, input_data: GetMinerPredictionInputData):
+        mock_miner_call.return_value = input_data.miner_response
+
+        mock_cc100 = MagicMock(spec=CC100)
+        validator = self.setup_validator(mock_cc100)
+
+        result = validator._get_miner_prediction(input_data.prompt, input_data.miner_info)
+
+        assert result == input_data.expected_result
+        mock_miner_call.assert_called_once()
+
+    @dataclass
+    class ReturnMinerScoresInputData:
+        score: Dict[str, float]
+        miner_info: Dict[str, str]
+        miner_response: bool
+        expected_result: bool
+
+    @pytest.mark.parametrize("input_data", [
+        ReturnMinerScoresInputData(
+            score={"accuracy": 0.95},
+            miner_info={"address": "127.0.0.1:8080", "key": "miner_key"},
+            miner_response=True,
+            expected_result=True,
+        ),
+    ])
+    @patch.object(TranslateValidator, "miner_call")
+    def test_return_miner_scores(self, mock_miner_call, input_data: ReturnMinerScoresInputData):
+        mock_miner_call.return_value = input_data.miner_response
+
+        mock_cc100 = MagicMock(spec=CC100)
+        validator = self.setup_validator(mock_cc100)
+
+        result = validator._return_miner_scores(input_data.score, input_data.miner_info)
+
+        assert result == input_data.expected_result
+        mock_miner_call.assert_called_once()
+
+    @dataclass
+    class GetMinersToQueryInputData:
+        miners: List[Dict[str, Any]]
+        current_weights: Dict[str, Dict[str, Any]]
+        expected_remaining_miners: List[Dict[str, Any]]
+        expected_miners_to_query: List[Dict[str, Any]]
+
+    @pytest.mark.parametrize("input_data", [
+        GetMinersToQueryInputData(
+            miners=[
+                {"uid": 1, "key": "key1"},
+                {"uid": 2, "key": "key2"},
+                {"uid": 3, "key": "key3"},
+            ],
+            current_weights={"1": {"ss58": "key1"}},
+            expected_remaining_miners=[
+                {"uid": 2, "key": "key2"},
+                {"uid": 3, "key": "key3"},
+            ],
+            expected_miners_to_query=[
+                {"uid": 2, "key": "key2"},
+                {"uid": 3, "key": "key3"},
+            ],
+        ),
+    ])
+    @patch(f"{module}.read_weight_file")
+    @patch(f"{module}.write_weight_file")
+    def test_get_miners_to_query(self, mock_write_weight_file, mock_read_weight_file,
+                                 input_data: GetMinersToQueryInputData):
+        mock_read_weight_file.return_value = input_data.current_weights
+
+        mock_cc100 = MagicMock(spec=CC100)
+        validator = self.setup_validator(mock_cc100)
+
+        remaining_miners, miners_to_query = validator.get_miners_to_query(input_data.miners)
+
+        assert remaining_miners == input_data.expected_remaining_miners
+        assert miners_to_query == input_data.expected_miners_to_query
+
+    @dataclass
+    class PromptMinersInputData:
+        miners_to_query: List[Dict[str, Any]]
+        miner_responses: List[str]
+
+    @pytest.mark.parametrize("input_data", [
+        PromptMinersInputData(
+            miners_to_query=[
+                {"uid": 1, "key": "key1"},
+                {"uid": 2, "key": "key2"},
+            ],
+            miner_responses=["Response1", "Response2"],
+        ),
+    ])
+    @patch.object(TranslateValidator, "_get_miner_prediction")
+    def test_prompt_miners(self, mock_get_miner_prediction, input_data: PromptMinersInputData):
+        mock_get_miner_prediction.side_effect = input_data.miner_responses
+
+        mock_cc100 = MagicMock(spec=CC100)
+        validator = self.setup_validator(mock_cc100)
+
+        miner_answers = validator.prompt_miners(mock_get_miner_prediction, input_data.miners_to_query)
+
+        assert miner_answers == input_data.miner_responses
+        assert mock_get_miner_prediction.call_count == len(input_data.miners_to_query)
+
+    @dataclass
+    class ReturnMinerScoresInputData:
+        full_scores: Dict[int, str]
+        miners_to_query: List[Dict[str, Any]]
+
+    @pytest.mark.parametrize("input_data", [
+        ReturnMinerScoresInputData(
+            full_scores={0: "score1", 1: "score2"},
+            miners_to_query=[{"uid": 0, "key": "key1"}, {"uid": 1, "key": "key2"}],
+        ),
+    ])
+    @patch.object(TranslateValidator, "_return_miner_scores")
+    def test_return_miner_scores(self, mock_return_miner_scores, input_data: ReturnMinerScoresInputData):
+        mock_cc100 = MagicMock(spec=CC100)
+        validator = self.setup_validator(mock_cc100)
+
+        validator.return_miner_scores(input_data.full_scores, input_data.miners_to_query)
+
+        assert mock_return_miner_scores.call_count == len(input_data.miners_to_query)
+
+    @dataclass
+    class GetScoreDictInputData:
+        miners_to_query: List[Dict[str, Any]]
+        scores: List[float]
+        expected_result: Dict[int, float]
+
+    @pytest.mark.parametrize("input_data", [
+        GetScoreDictInputData(
+            miners_to_query=[{"uid": 1}, {"uid": 2}, {"uid": 3}],
+            scores=[0.9, 0.8, 0.7],
+            expected_result={1: 0.9, 2: 0.8, 3: 0.7},
+        ),
+    ])
+    def test_get_score_dict(self, input_data: GetScoreDictInputData):
+        mock_cc100 = MagicMock(spec=CC100)
+        validator = self.setup_validator(mock_cc100)
+
+        result = validator.get_score_dict(input_data.miners_to_query, input_data.scores)
+
+        assert result == input_data.expected_result
+
+    @dataclass
+    class GetDataToWriteInputData:
+        miners_to_query: List[Dict[str, Any]]
+        score_dict: Dict[int, float]
+        expected_result: Dict[int, Dict[str, Any]]
+
+    @pytest.mark.parametrize("input_data", [
+        GetDataToWriteInputData(
+            miners_to_query=[{"uid": 1, "key": "key1"}, {"uid": 2, "key": "key2"}],
+            score_dict={1: 0.9, 2: 0.8},
+            expected_result={
+                1: {"ss58": "key1", "score": 0.9},
+                2: {"ss58": "key2", "score": 0.8},
+            },
+        ),
+    ])
+    def test_get_data_to_write(self, input_data: GetDataToWriteInputData):
+        mock_cc100 = MagicMock(spec=CC100)
+        validator = self.setup_validator(mock_cc100)
+
+        result = validator.get_data_to_write(input_data.miners_to_query, input_data.score_dict)
+
+        assert result == input_data.expected_result
+
+    @dataclass
+    class GetCurrentWeightsInputData:
+        data_to_write: Dict[int, Dict[str, Any]]
+        current_weights: Dict[int, Dict[str, Any]]
+        expected_result: Dict[int, Dict[str, Any]]
+
+    @pytest.mark.parametrize("input_data", [
+        GetCurrentWeightsInputData(
+            data_to_write={1: {"ss58": "key1", "score": 0.9}},
+            current_weights={2: {"ss58": "key2", "score": 0.8}},
+            expected_result={
+                2: {"ss58": "key2", "score": 0.8},
+                1: {"ss58": "key1", "score": 0.9},
+            },
+        ),
+    ])
+    @patch(f"{module}.read_weight_file")
+    def test_get_current_weights(self, mock_read_weight_file, input_data: GetCurrentWeightsInputData):
+        mock_read_weight_file.return_value = input_data.current_weights
+
+        mock_cc100 = MagicMock(spec=CC100)
+        validator = self.setup_validator(mock_cc100)
+
+        result = validator.get_current_weights(input_data.data_to_write)
+
+        assert result == input_data.expected_result
+
+    @dataclass
+    class WriteCurrentWeightsInputData:
+        miners_to_query: List[Dict[str, Any]]
+        score_dict: Dict[int, float]
+        expected_data_to_write: Dict[int, Dict[str, Any]]
+
+    @pytest.mark.parametrize("input_data", [
+        WriteCurrentWeightsInputData(
+            miners_to_query=[{"uid": 1, "key": "key1"}, {"uid": 2, "key": "key2"}],
+            score_dict={1: 0.9, 2: 0.8},
+            expected_data_to_write={
+                1: {"ss58": "key1", "score": 0.9},
+                2: {"ss58": "key2", "score": 0.8},
+            },
+        ),
+    ])
+    @patch(f"{module}.write_weight_file")
+    @patch(f"{module}.read_weight_file", return_value={})
+    def test_write_current_weights(self, mock_read_weight_file, mock_write_weight_file,
+                                   input_data: WriteCurrentWeightsInputData):
+        mock_cc100 = MagicMock(spec=CC100)
+        validator = self.setup_validator(mock_cc100)
+
+        validator.write_current_weights(input_data.miners_to_query, input_data.score_dict)
+
+        assert mock_write_weight_file.call_count == 2
+        mock_write_weight_file.assert_any_call(validator.weights_file, input_data.expected_data_to_write)
+
+    @dataclass
+    class GetFullScoreDictInputData:
+        current_weights: Dict[int, Dict[str, Any]]
+        expected_result: Dict[int, float]
+
+    @pytest.mark.parametrize("input_data", [
+        GetFullScoreDictInputData(
+            current_weights={1: {"ss58": "key1", "score": 0.9}, 2: {"ss58": "key2", "score": 0.8}},
+            expected_result={1: 0.9, 2: 0.8},
+        ),
+    ])
+    @patch(f"{module}.read_weight_file")
+    def test_get_full_score_dict(self, mock_read_weight_file, input_data: GetFullScoreDictInputData):
+        mock_read_weight_file.return_value = input_data.current_weights
+
+        mock_cc100 = MagicMock(spec=CC100)
+        validator = self.setup_validator(mock_cc100)
+
+        result = validator.get_full_score_dict()
+
+        assert result == input_data.expected_result
+
+    @patch(f"{module}.write_weight_file")
+    def test_reset_validator(self, mock_write_weight_file):
+        mock_cc100 = MagicMock(spec=CC100)
+        validator = self.setup_validator(mock_cc100)
+
+        validator.reset_validator()
+
+        assert mock_write_weight_file.call_count == 2
+        mock_write_weight_file.assert_any_call(validator.weights_file, {})
+
+
 
