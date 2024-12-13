@@ -3,7 +3,6 @@ from comet import download_model, load_from_checkpoint
 from comet.models.base import CometModel
 from bert_score import BERTScorer
 from typing import List, Dict, Any, Tuple
-import langid
 
 
 def get_comet_model() -> CometModel:
@@ -54,25 +53,16 @@ class Reward:
             composite_score = clipped_score
         return composite_score
 
-    def is_valid_response(self, target_language: str, value: Any) -> bool:
+    def is_valid_response(self, value: Any) -> bool:
         if value is None or not isinstance(value, str):
             return False
-        elif not self.is_correct_langauge(target_language, value):
-            return False
         return True
-
-    def is_correct_langauge(self, target_language: str, target: str) -> bool:
-        classified_language, confidence = langid.classify(target)
-        if target_language != classified_language:
-            return False
-        else:
-            return True
 
     def get_targets_and_indexes(self, targets: List[str], target_language: str) -> Tuple[List[str], List[int]]:
         cleaned_targets = []
         empty_indexes = []
         for index, value in enumerate(targets):
-            if self.is_valid_response(target_language, value):
+            if self.is_valid_response(value):
                 cleaned_targets.append(value)
             else:
                 empty_indexes.append(index)
