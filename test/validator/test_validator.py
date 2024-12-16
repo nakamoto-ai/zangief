@@ -786,17 +786,17 @@ class TestTranslateValidator:
 
     @pytest.mark.parametrize("input_data", [
         GetUnweightedScoresInputData(
-            full_score_dict={1: 0.8, 2: 0.6},
-            normalized_scores={1: 0.9, 2: 0.7},
-            expected_unweighted_sum=1.6,
+            full_score_dict={1: 0.8, 2: 0.6, 3: 0.4, 4: 0.2, 5: 0.25},
+            normalized_scores={1: 1.0, 2: 0.5185, 3: 0.4815, 4: 0.0, 5: 0.2106},
+            expected_unweighted_sum=2.2106,
         ),
     ])
     @patch(f"{module}.normalize_scores")
-    @patch(f"{module}.conditional_power_scaling")
-    def test_get_unweighted_scores(self, mock_power_scaling, mock_normalize_scores,
+    @patch(f"{module}.conditional_cubic_scaling")
+    def test_get_unweighted_scores(self, mock_cubic_scaling, mock_normalize_scores,
                                    input_data: GetUnweightedScoresInputData):
         mock_normalize_scores.return_value = input_data.normalized_scores.values()
-        mock_power_scaling.return_value = input_data.normalized_scores
+        mock_cubic_scaling.return_value = input_data.normalized_scores
 
         mock_cc100 = MagicMock()
         validator = self.setup_validator(mock_cc100)

@@ -22,7 +22,7 @@ from substrateinterface import Keypair
 from loguru import logger
 
 from .weights_io import ensure_weights_file, write_weight_file, read_weight_file
-from .power_scaling import conditional_power_scaling
+from .power_scaling import conditional_cubic_scaling
 from .reward import Reward, get_comet_model, get_bert_model
 from .prompt_datasets.cc_100 import CC100
 from .client import ModuleClientFactory
@@ -395,9 +395,9 @@ class TranslateValidator(Module):
         normal_scores = normalize_scores(abnormal_scores)
         normal_score_dict = {uid: score for uid, score in zip(full_score_dict.keys(), normal_scores)}
 
-        power_scaled_scores = conditional_power_scaling(normal_score_dict)
-        unweighted_scores = sum(power_scaled_scores.values())
-        return unweighted_scores, power_scaled_scores
+        cubic_scaled_scores = conditional_cubic_scaling(normal_score_dict)
+        unweighted_scores = sum(cubic_scaled_scores.values())
+        return unweighted_scores, cubic_scaled_scores
 
     def normalize_weighted_scores(self, weighted_scores: Dict[int, float]) -> Dict[int, float]:
         return {k: v for k, v in zip(weighted_scores.keys(), normalize_scores(weighted_scores.values())) if v != 0}
