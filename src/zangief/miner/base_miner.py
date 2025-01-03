@@ -38,8 +38,31 @@ class BaseMiner(Module):
 
         return {"answer": translation}
 
+    @endpoint
+    def transcribe(self, voice_record):
+        start_time = time.time()
+        logger.info(f"Generating translation... ")
+
+        logger.info(f"Source ({source_language})")
+        logger.info(f"{prompt}")
+
+        translation = self.generate_translation(prompt, source_language, target_language)
+
+        logger.info(f"Translation ({target_language})")
+        logger.info(translation)
+
+        end_time = time.time()
+        execution_time = end_time - start_time
+        logger.info(f"Responded in {execution_time} seconds")
+
+        return {"answer": translation}
+
     @abstractmethod
     def generate_translation(self, prompt: str, source_language: str, target_language: str):
+        pass
+
+    @abstractmethod
+    def generate_transcription(self):
         pass
 
     @staticmethod
