@@ -2,11 +2,12 @@ from transformers import (
     M2M100ForConditionalGeneration,
     M2M100Tokenizer)
 from base_miner import BaseMiner
+from config import Config
 
 
 class M2MMiner(BaseMiner):
 
-    def __init__(self, config):
+    def __init__(self, config: Config):
         super().__init__()
         self.config = config
         self.model_name = config.get_value("model", "facebook/m2m100_1.2B")
@@ -24,7 +25,7 @@ class M2MMiner(BaseMiner):
         if self.device != "cpu":
             self.model.to(self.device)
 
-    def generate_translation(self, prompt: str, source_language: str, target_language: str):
+    def generate_translation(self, prompt: str, source_language: str, target_language: str) -> str:
         self.tokenizer.src_lang = source_language
         source_tokenizer = self.tokenizer(
             [prompt],

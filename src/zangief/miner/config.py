@@ -1,4 +1,5 @@
 import configparser
+from typing import Any
 
 
 class Config:
@@ -12,13 +13,13 @@ class Config:
     num_beams: str
     key_password: str
 
-    def __init__(self, config_file):
+    def __init__(self, config_file: str):
         if config_file is None:
             config_file = "../../../env/config.ini"
         self.config = configparser.ConfigParser()
         self.config.read(config_file)
 
-    def get_value(self, option, default=None):
+    def get_value(self, option: str, default: Any = None) -> Any:
         section = "miner"
         if self.config.has_option(section, option):
             return self.config.get(section, option)

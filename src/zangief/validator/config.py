@@ -2,7 +2,7 @@ import configparser
 
 
 class Config:
-    def __init__(self, config_file):
+    def __init__(self, config_file: str):
         if config_file is None:
             config_file = "env/config.ini"
         config = configparser.ConfigParser()

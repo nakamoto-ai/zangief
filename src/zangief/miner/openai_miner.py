@@ -2,10 +2,12 @@ from openai import OpenAI, APIError
 from loguru import logger
 from openai.types.chat.chat_completion import ChatCompletion
 from base_miner import BaseMiner
+from config import Config
+
 
 class OpenAIMiner(BaseMiner):
 
-    def __init__(self, config) -> None:
+    def __init__(self, config: Config) -> None:
         super().__init__()
         self.config = config 
         self.max_tokens = int(str(config.get_value(option="max_tokens", default=1000)))
@@ -19,7 +21,11 @@ class OpenAIMiner(BaseMiner):
                 "OpenAI key must be specified in the env/config.ini (openai_key = YOUR_KEY_HERE)"
             )
         self.client = OpenAI(api_key=openai_key)
-        self.system_prompt = "You are an expert translator who can translate text from a large number of languages. You pay attention to detail providing semantically and grammatically accurate translations quickly and effectively. You will be asked by users to translate text from one language to another. You will not provide any additional context or instructions. Simply return the translated response."
+        self.system_prompt = ("You are an expert translator who can translate text from a large number of languages."
+                              " You pay attention to detail providing semantically and grammatically "
+                              "accurate translations quickly and effectively. You will be asked by users"
+                              " to translate text from one language to another. You will not provide any "
+                              "additional context or instructions. Simply return the translated response.")
 
     def generate_translation(
         self, prompt: str, source_language: str, target_language: str

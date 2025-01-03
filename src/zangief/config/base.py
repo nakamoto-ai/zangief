@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from typing import Any
 
 ENV_KEY_NAME = "KEY_NAME"
 ENV_TESTNET = "TESTNET"
@@ -45,7 +46,7 @@ class BaseConfig:
         if ignore_config_file is False:
             load_dotenv(dotenv_path=env_path, override=True)
 
-    def _get(self, key, default=None):
+    def _get(self, key: str, default: Any = None) -> Any:
         """
         Retrieves the value of an environment variable with a given key.
 
